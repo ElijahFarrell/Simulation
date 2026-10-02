@@ -1,4 +1,4 @@
-import { SCORE_WEIGHTS, STORM_DAMAGE_CAP } from "./constants";
+import { CALL_PARTS, type CallPart, SCORE_WEIGHTS, STORM_DAMAGE_CAP } from "./constants";
 import { clamp } from "./geometry";
 import type { FightOutcome, ScoreBreakdown } from "./types";
 
@@ -27,6 +27,12 @@ export function scoreDecision(input: ScoreInput): ScoreBreakdown {
       SCORE_WEIGHTS.positioning * positioning,
   );
   return { storm, contact, exposure, surge, positioning, total };
+}
+
+export function pointsLost(score: ScoreBreakdown): Record<CallPart, number> {
+  const lost = (part: CallPart) =>
+    Math.round(CALL_PARTS[part].scores.reduce((sum, key) => sum + SCORE_WEIGHTS[key] * (100 - score[key]), 0));
+  return { where: lost("where"), when: lost("when"), contact: lost("contact") };
 }
 
 function contactScore(input: ScoreInput): number {

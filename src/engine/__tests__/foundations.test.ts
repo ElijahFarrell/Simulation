@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAP_SIZE } from "../constants";
+import { MAP_SIZE, SCORE_WEIGHTS } from "../constants";
 import {
   circleContainsCircle,
   circleOnMap,
@@ -7,6 +7,7 @@ import {
   sampleDisc,
 } from "../geometry";
 import { createRng } from "../rng";
+import { pointsLost } from "../scoring";
 import { generateZones } from "../zones";
 
 describe("rng", () => {
@@ -54,5 +55,20 @@ describe("generateZones", () => {
       }
       expect(zones.some((zone) => zone.isMoving)).toBe(true);
     }
+  });
+});
+
+describe("pointsLost", () => {
+  const perfect = { storm: 100, contact: 100, exposure: 100, surge: 100, positioning: 100, total: 100 };
+
+  it("is zero for a perfect call", () => {
+    expect(pointsLost(perfect)).toEqual({ where: 0, when: 0, contact: 0 });
+  });
+
+  it("charges each score part to the choice that drives it", () => {
+    const lost = pointsLost({ ...perfect, storm: 50, contact: 12, surge: 100, exposure: 75, positioning: 61 });
+    expect(lost.when).toBe(Math.round(SCORE_WEIGHTS.storm * 50));
+    expect(lost.contact).toBe(Math.round(SCORE_WEIGHTS.contact * 88));
+    expect(lost.where).toBe(Math.round(SCORE_WEIGHTS.exposure * 25 + SCORE_WEIGHTS.positioning * 39));
   });
 });
