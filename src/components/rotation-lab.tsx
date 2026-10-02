@@ -1,6 +1,9 @@
 "use client";
 
+import { Chat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { CoachDialog } from "@/components/coach-dialog";
 import { DecisionPanel } from "@/components/decision-panel";
 import { FeedbackCard } from "@/components/feedback-card";
 import { initialLabState, labReducer, type Overlays } from "@/components/lab-state";
@@ -19,12 +22,25 @@ import { sectorIndex } from "@/engine/geometry";
 import { positioningGrid } from "@/engine/analysis";
 import { scenarioById } from "@/engine/scenarios";
 import type { Engagement, Timing } from "@/engine/types";
+import { COACH_API } from "@/lib/coach/constants";
+import { buildCoachContext } from "@/lib/coach/context";
 import { EMPTY_STATS, mergeStats, readStats, subscribeStats, writeStats } from "@/lib/review";
+
+type CoachState = { open: boolean; focusZone: number | null };
 
 export function RotationLab() {
   const [state, dispatch] = useReducer(labReducer, initialLabState);
   const stats = useSyncExternalStore(subscribeStats, readStats, () => EMPTY_STATS);
   const [dismissedSummary, setDismissedSummary] = useState<string | null>(null);
+  const [coach, setCoach] = useState<CoachState>({ open: false, focusZone: null });
+  const coachChat = useMemo(
+    () =>
+      new Chat<UIMessage>({
+        id: `coach-${state.runId}`,
+        transport: new DefaultChatTransport({ api: COACH_API }),
+      }),
+    [state.runId],
+  );
   const recorded = useRef<string | null>(null);
 
   const game = state.game;
@@ -41,7 +57,7 @@ export function RotationLab() {
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (isTyping(event.target) || state.screen !== "play" || !state.game) return;
+      if (coach.open || isTyping(event.target) || state.screen !== "play" || !state.game) return;
       const timing = timingKey(event.key);
       if (timing) {
         dispatch({ type: "timing", timing });
@@ -57,7 +73,7 @@ export function RotationLab() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [state.game, state.screen]);
+  }, [coach.open, state.game, state.screen]);
 
   const view = useMemo(() => (game ? getPhaseView(game) : null), [game]);
   const heatmap = useMemo(() => {
@@ -140,6 +156,7 @@ export function RotationLab() {
               result={last}
               canAdvance={game.status === "resolved"}
               onNext={() => dispatch({ type: "next" })}
+              onAsk={() => setCoach({ open: true, focusZone: last.zone.index })}
             />
           ) : (
             <DecisionPanel
@@ -193,6 +210,16 @@ export function RotationLab() {
           if (summaryKey) setDismissedSummary(summaryKey);
           dispatch({ type: "menu" });
         }}
+        onAsk={() => {
+          if (summaryKey) setDismissedSummary(summaryKey);
+          setCoach({ open: true, focusZone: null });
+        }}
+      />
+      <CoachDialog
+        chat={coachChat}
+        context={buildCoachContext(game, coach.focusZone)}
+        open={coach.open}
+        onOpenChange={(open) => setCoach((current) => ({ ...current, open }))}
       />
     </div>
   );

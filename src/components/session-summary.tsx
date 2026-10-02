@@ -19,6 +19,7 @@ export function SessionSummary({
   onReplay,
   onNewGame,
   onMenu,
+  onAsk,
 }: {
   game: GameState;
   open: boolean;
@@ -26,6 +27,7 @@ export function SessionSummary({
   onReplay: () => void;
   onNewGame: () => void;
   onMenu: () => void;
+  onAsk: () => void;
 }) {
   const average = Math.round(averageScore(game.history));
   const habit = worstHabit(game.history);
@@ -63,9 +65,14 @@ export function SessionSummary({
           )}
         </div>
         <DialogFooter className="sm:justify-between">
-          <Button type="button" variant="outline" onClick={onMenu}>
-            Menu
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onMenu}>
+              Menu
+            </Button>
+            <Button type="button" variant="outline" onClick={onAsk}>
+              Ask coach
+            </Button>
+          </div>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onReplay}>
               Same seed
