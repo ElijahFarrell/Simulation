@@ -137,11 +137,9 @@ function drawCompass(ctx: CanvasRenderingContext2D, size: number, circle: Circle
   ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  const distance = circle.radius >= 70 ? circle.radius * 0.8 : circle.radius + 26;
   labels.forEach((label, index) => {
-    const point = worldToScreen(
-      pointFromNorth(circle.center, (index * Math.PI) / 2, circle.radius + Math.max(36, circle.radius * 0.1)),
-      size,
-    );
+    const point = worldToScreen(pointFromNorth(circle.center, (index * Math.PI) / 2, distance), size);
     ctx.fillText(label, point.x, point.y);
   });
   ctx.restore();
