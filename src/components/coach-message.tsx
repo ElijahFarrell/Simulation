@@ -2,10 +2,11 @@
 
 import { getToolName, isToolUIPart, type DynamicToolUIPart, type ToolUIPart, type UIMessage } from "ai";
 import { GlobeIcon } from "lucide-react";
+import { Streamdown } from "streamdown";
 
 type SearchResult = { title: string; url: string };
 
-export function CoachMessage({ message }: { message: UIMessage }) {
+export function CoachMessage({ message, streaming }: { message: UIMessage; streaming: boolean }) {
   if (message.role === "user") {
     return (
       <div className="ml-auto max-w-[85%] rounded-lg bg-primary/15 px-3 py-2 whitespace-pre-wrap">
@@ -19,9 +20,9 @@ export function CoachMessage({ message }: { message: UIMessage }) {
       {message.parts.map((part, index) => {
         if (part.type === "text") {
           return (
-            <p key={index} className="leading-relaxed whitespace-pre-wrap">
+            <Streamdown key={index} isAnimating={streaming} className="leading-relaxed">
               {part.text}
-            </p>
+            </Streamdown>
           );
         }
         if (isToolUIPart(part) && getToolName(part) === "web_search") {
