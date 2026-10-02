@@ -13,7 +13,7 @@ const TIMINGS: { value: Timing; label: string; hint: string }[] = [
 ];
 
 const ENGAGEMENTS: { value: Engagement; label: string; hint: string }[] = [
-  { value: "avoid", label: "Avoid", hint: "Give up the fight" },
+  { value: "avoid", label: "Avoid", hint: "Don't take the fight" },
   { value: "tag", label: "Tag", hint: "Damage, then leave" },
   { value: "fight", label: "Fight", hint: "Commit the trio" },
 ];

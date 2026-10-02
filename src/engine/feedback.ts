@@ -227,10 +227,18 @@ function surgeTag(ctx: FeedbackContext): FeedbackLine | null {
 
 function exposureLow(ctx: FeedbackContext): FeedbackLine | null {
   if (ctx.exposure > 2) return null;
+  if (ctx.exposure === 0) {
+    return {
+      tone: "good",
+      ruleId: "exposure-low",
+      text: "Nobody was in range of that spot. Quiet hold.",
+    };
+  }
+  const noun = ctx.exposure === 1 ? "direction" : "directions";
   return {
     tone: "good",
     ruleId: "exposure-low",
-    text: `Only ${ctx.exposure} direction${ctx.exposure === 1 ? "" : "s"} could hit you. Strong hold.`,
+    text: `Only ${ctx.exposure} ${noun} could hit you. Strong hold.`,
   };
 }
 
@@ -281,5 +289,5 @@ export function describeCall(decision: Decision, sector: SectorInfo | null, held
 }
 
 export function heldCenter(decision: Decision, zone: Circle): boolean {
-  return dist(decision.destination, zone.center) < zone.radius * 0.5;
+  return dist(decision.destination, zone.center) < zone.radius * 0.32;
 }
