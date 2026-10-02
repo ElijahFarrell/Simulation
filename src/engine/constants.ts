@@ -44,6 +44,15 @@ export const SCORE_WEIGHTS = {
   positioning: 0.18,
 } as const;
 
+export type ScorePart = keyof typeof SCORE_WEIGHTS;
+export type CallPart = "where" | "when" | "contact";
+
+export const CALL_PARTS: Record<CallPart, { label: string; scores: readonly ScorePart[] }> = {
+  where: { label: "Where you hold", scores: ["exposure", "positioning"] },
+  when: { label: "When you leave", scores: ["storm"] },
+  contact: { label: "On contact", scores: ["contact", "surge"] },
+};
+
 export type ZoneRow = {
   radius: number;
   waitSec: number;

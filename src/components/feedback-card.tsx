@@ -3,7 +3,19 @@
 import { MessageCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import type { FeedbackTone, PhaseResult } from "@/engine/types";
+import { CALL_PARTS, type CallPart, type ScorePart } from "@/engine/constants";
+import { pointsLost } from "@/engine/scoring";
+import type { FeedbackTone, PhaseResult, ScoreBreakdown } from "@/engine/types";
+
+const CALL_ORDER: CallPart[] = ["where", "when", "contact"];
+
+const SCORE_LABELS: Record<ScorePart, string> = {
+  exposure: "Exposure",
+  positioning: "Next pull",
+  storm: "Storm",
+  contact: "Result",
+  surge: "Surge",
+};
 
 const TONE_CLASS: Record<FeedbackTone, string> = {
   bad: "text-red-300",
@@ -22,6 +34,7 @@ export function FeedbackCard({
   onNext: () => void;
   onAsk: () => void;
 }) {
+  const lost = pointsLost(result.score);
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -31,11 +44,9 @@ export function FeedbackCard({
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <ScoreBar label="Storm" value={result.score.storm} />
-        <ScoreBar label="Contact" value={result.score.contact} />
-        <ScoreBar label="Exposure" value={result.score.exposure} />
-        <ScoreBar label="Surge" value={result.score.surge} />
-        <ScoreBar label="Next pull" value={result.score.positioning} />
+        {CALL_ORDER.map((part) => (
+          <CallPartScores key={part} part={part} score={result.score} lost={lost[part]} />
+        ))}
         <ul className="grid gap-2 pt-1">
           {result.feedback.map((line) => (
             <li key={line.ruleId} className={`text-sm ${TONE_CLASS[line.tone]}`}>
@@ -63,6 +74,22 @@ export function FeedbackCard({
         ) : null}
       </CardFooter>
     </Card>
+  );
+}
+
+function CallPartScores({ part, score, lost }: { part: CallPart; score: ScoreBreakdown; lost: number }) {
+  return (
+    <section className="grid gap-1.5">
+      <div className="flex items-baseline justify-between text-xs">
+        <h3 className="font-medium">{CALL_PARTS[part].label}</h3>
+        <span className={lost > 0 ? "tabular-nums text-muted-foreground" : "text-emerald-300"}>
+          {lost > 0 ? `−${lost}` : "clean"}
+        </span>
+      </div>
+      {CALL_PARTS[part].scores.map((key) => (
+        <ScoreBar key={key} label={SCORE_LABELS[key]} value={score[key]} />
+      ))}
+    </section>
   );
 }
 
