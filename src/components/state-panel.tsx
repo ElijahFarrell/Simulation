@@ -2,17 +2,27 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PULL_COPY, ZONE_TABLE } from "@/engine/constants";
 import type { PhaseView } from "@/engine/types";
 
-export function StatePanel({ view, teamsAlive }: { view: PhaseView; teamsAlive: number }) {
+export function StatePanel({
+  view,
+  teamsAlive,
+  revealPull,
+}: {
+  view: PhaseView;
+  teamsAlive: number;
+  revealPull: boolean;
+}) {
   const { player, zone } = view;
+  const pull = PULL_COPY[zone.pull];
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">
             Zone {zone.index}
-            <span className="text-muted-foreground"> / 9</span>
+            <span className="text-muted-foreground"> / {ZONE_TABLE.length}</span>
           </CardTitle>
           <Badge variant="outline">{view.phaseName}</Badge>
         </div>
@@ -38,8 +48,15 @@ export function StatePanel({ view, teamsAlive }: { view: PhaseView; teamsAlive: 
           <span className="text-muted-foreground">Storm</span>
           <span className="tabular-nums">{zone.stormDps}/s</span>
         </div>
+        {revealPull ? (
+          <p className="text-sm">
+            <span className="font-medium">{pull.name}.</span> {pull.line}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">Name the pull before you go.</p>
+        )}
         {zone.surgeActive ? (
-          <Badge variant="destructive">Surge is live. Low damage gets hit.</Badge>
+          <Badge variant="destructive">Surge is on. Teams with the least damage get hurt.</Badge>
         ) : (
           <Badge variant="secondary">No surge this zone</Badge>
         )}

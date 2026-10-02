@@ -32,7 +32,7 @@ export function getPhaseView(state: GameState): PhaseView {
     phaseName: phaseLabel(zone),
     sectors: sectorDensity(state.teams, zone.to),
     pull: pullRegion(zone, following),
-    followingRadius: following?.to.radius ?? null,
+    following: following ?? null,
     teamsAlive: state.teams.filter((team) => !team.eliminated).length,
     player: playerOf(state),
     heatmapSeed: (state.seed + state.phaseIndex * 997) >>> 0,

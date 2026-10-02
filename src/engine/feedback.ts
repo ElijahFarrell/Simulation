@@ -31,33 +31,35 @@ type Rule = (ctx: FeedbackContext) => FeedbackLine | null;
 const TONE_RANK = { bad: 0, warn: 1, good: 2 } as const;
 
 export const RULE_LESSONS: Record<string, string> = {
-  "storm-heavy": "You keep taking storm. Leave earlier, or path closer to the safe side.",
-  "moving-late": "Moving zones punish a late walk. Start the rotate when the zone is still calm.",
-  "fight-loss": "You lost the fight. Check numbers and mats before you commit.",
-  "surge-miss": "Surge hit you. Tag someone before you box up when the lobby is still big.",
-  "third-party": "Fights in a stack don't stay 1v1. A third team walks in on the winner.",
-  "exposure-high": "Too many angles could shoot you. Edge holds cut the map in half.",
-  "dead-side-lost": "A dead side is a bet. If the next pull goes the other way, leave immediately.",
-  "stacked-avoid": "You walked into the stacked side with no plan to tag or fight.",
-  "low-mats": "Full fights spend mats. A tag is the surge play when you're poor.",
-  "surge-passive": "Avoiding everyone with surge live only works if the lobby is already thin.",
-  "center-exposed": "Center shortens the next rotate and opens every angle.",
-  "pull-came": "The pull came to your side. That's when a dead-side hold is free.",
-  "storm-clean": "Clean rotates are a habit. Keep treating storm damage as optional.",
-  "pre-rotate": "Early on a moving zone is how you stay on the safe side of the shift.",
-  "surge-tag": "The tag did its job. You don't need a full fight to clear surge.",
-  "exposure-low": "Few angles could touch you. That's a hold, not a coinflip.",
-  "fight-win": "You won a fight you chose. Take those when the third-party count is low.",
-  "late-paid": "Late works when the path is empty and you actually needed the mats.",
-  "dead-side-quiet": "Dead side, and you didn't turn it into a fight. That's the point of the side.",
-  steady: "Nothing in the call was extreme. Stay picky about the zones that matter.",
+  "storm-heavy": "You keep getting caught in the storm. Leave sooner, or walk on the side closest to the new circle.",
+  "moving-late": "When the zone moves, don't wait. Leave while it's still calm.",
+  "half-late": "On a half and half zone, half the new circle starts in the storm. Leave early or you walk through storm.",
+  "fight-loss": "You lost the fight. Before you fight, check: do you have more players and more mats?",
+  "surge-miss": "Surge hit you. When lots of teams are alive, hit someone before you hide.",
+  "third-party": "Fights near lots of teams never stay 1 vs 1. Another team jumps in and finishes the winner.",
+  "exposure-high": "Too many teams could shoot you. Stand near an edge so enemies can only come from one side.",
+  "dead-side-lost": "A quiet side is a bet. If the next zone moves away from you, leave right away.",
+  "stacked-avoid": "You walked into the crowded side but didn't want to fight. That's all risk and no reward.",
+  "low-mats": "Big fights use lots of mats. When you're low, hit someone and leave instead.",
+  "surge-passive": "Hiding from everyone during surge only works when few teams are left.",
+  "center-exposed": "The middle is close to every next zone, but every team can see you there.",
+  "pull-came": "The next zone came to your side. That's when holding a quiet side pays off.",
+  "storm-clean": "No storm damage. Keep treating the storm like lava you never touch.",
+  "pre-rotate": "Leaving early on a moving zone keeps you ahead of the storm.",
+  "deep-early": "When the zone pulls far away, leave right away. Being first beats being fast.",
+  "surge-tag": "Your hit-and-leave did the job. You don't need a full fight to beat surge.",
+  "exposure-low": "Only a few teams could reach you. That's a safe spot.",
+  "fight-win": "You won a fight you picked. Take those when no other team is close.",
+  "late-paid": "Leaving late works when the path is empty and you need mats.",
+  "dead-side-quiet": "Quiet side, and you didn't start a fight. That's the whole point of it.",
+  steady: "Nothing big went wrong. Keep paying attention to the zones that matter.",
 };
 
 export function buildFeedback(ctx: FeedbackContext): FeedbackLine[] {
   const lines = RULES.map((rule) => rule(ctx)).filter((line): line is FeedbackLine => line !== null);
   lines.sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone]);
   if (lines.length === 0) {
-    return [{ tone: "good", ruleId: "steady", text: "Quiet zone. Nothing in this call was extreme." }];
+    return [{ tone: "good", ruleId: "steady", text: "Quiet zone. Nothing big went wrong." }];
   }
   return lines.slice(0, 4);
 }
@@ -65,6 +67,7 @@ export function buildFeedback(ctx: FeedbackContext): FeedbackLine[] {
 const RULES: Rule[] = [
   stormHeavy,
   movingLate,
+  halfLate,
   fightLoss,
   surgeMiss,
   thirdParty,
@@ -77,6 +80,7 @@ const RULES: Rule[] = [
   pullCame,
   stormClean,
   preRotate,
+  deepEarly,
   surgeTag,
   exposureLow,
   fightWin,
@@ -90,7 +94,7 @@ function stormHeavy(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "storm-heavy",
-    text: `Storm hit you for ${rounded}. Late only pays when the path is already clear and you need the mats.`,
+    text: `The storm hit you for ${rounded}. Only leave late if the path is clear and you really need mats.`,
   };
 }
 
@@ -99,7 +103,16 @@ function movingLate(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "moving-late",
-    text: "This zone moves. A late rotate lets it run away from you and the storm does the rest.",
+    text: "This zone moves. If you leave late, it runs away from you and the storm catches you.",
+  };
+}
+
+function halfLate(ctx: FeedbackContext): FeedbackLine | null {
+  if (ctx.zone.pull !== "half" || ctx.decision.timing !== "late" || ctx.stormDamage < 25) return null;
+  return {
+    tone: "bad",
+    ruleId: "half-late",
+    text: "Half and half zone: half the new circle started in the storm. Leaving late made you walk through it.",
   };
 }
 
@@ -108,7 +121,7 @@ function fightLoss(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "fight-loss",
-    text: "You lost the fight. If mats or numbers are even, tagging and leaving is the higher-percentage call.",
+    text: "You lost the fight. If it's an even fight, hitting them and leaving is safer.",
   };
 }
 
@@ -117,7 +130,7 @@ function surgeMiss(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "surge-miss",
-    text: "Surge was live and your damage was too low. You needed a tag, not a full reset.",
+    text: "Surge was on and your team did too little damage. You needed to hit someone, not hide.",
   };
 }
 
@@ -126,7 +139,7 @@ function thirdParty(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "third-party",
-    text: "A third team crashed the fight. Stacked-side fights are not isolated.",
+    text: "Another team jumped into your fight. On a crowded side, fights never stay 1 vs 1.",
   };
 }
 
@@ -135,7 +148,7 @@ function exposureHigh(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "bad",
     ruleId: "exposure-high",
-    text: `${ctx.exposure} directions could shoot you from that spot. Deep center holds get swarmed.`,
+    text: `Teams could shoot you from ${ctx.exposure} directions. Spots deep in the middle get surrounded.`,
   };
 }
 
@@ -147,7 +160,7 @@ function deadSideLost(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "warn",
     ruleId: "dead-side-lost",
-    text: `You held ${side} and the next zone pulled away. Dead sides go quiet, then everyone there has to run at once.`,
+    text: `You sat on the ${side} side and the next zone moved away. Now everyone on that side has to run at the same time.`,
   };
 }
 
@@ -156,7 +169,7 @@ function stackedAvoid(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "warn",
     ruleId: "stacked-avoid",
-    text: "That side was stacked. Walking in while avoiding fights gives you the risk without the surge tags.",
+    text: "That side was crowded. Walking in without wanting a fight is all risk and no reward.",
   };
 }
 
@@ -166,7 +179,7 @@ function lowMats(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "warn",
     ruleId: "low-mats",
-    text: "You took a fight on low mats. A tag spends less and still counts for surge.",
+    text: "You fought with low mats. Hitting someone and leaving costs less and still counts for surge.",
   };
 }
 
@@ -175,7 +188,7 @@ function surgePassive(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "warn",
     ruleId: "surge-passive",
-    text: "Surge was active and you avoided everyone. That works once the lobby is thin, not while it's still big.",
+    text: "Surge was on and you stayed away from everyone. That only works when few teams are left.",
   };
 }
 
@@ -184,7 +197,7 @@ function centerExposed(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "warn",
     ruleId: "center-exposed",
-    text: "Center keeps the next rotate short, but you were open from several sides. Take it when the lobby is spread, not stacked.",
+    text: "The middle keeps your next walk short, but teams could see you from lots of sides. Only take it when teams are spread out.",
   };
 }
 
@@ -194,7 +207,7 @@ function pullCame(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "pull-came",
-    text: "The next zone pulled toward your side. The dead-side hold turned into a short rotate.",
+    text: "The next zone came toward your side, so your next walk is short.",
   };
 }
 
@@ -203,7 +216,7 @@ function stormClean(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "storm-clean",
-    text: "No storm damage. You made the zone on your own timing.",
+    text: "No storm damage. You got in on your own time.",
   };
 }
 
@@ -212,7 +225,16 @@ function preRotate(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "pre-rotate",
-    text: "Early rotate on a moving zone. You moved while the old circle was still safe.",
+    text: "You left early on a moving zone, while the old circle was still safe.",
+  };
+}
+
+function deepEarly(ctx: FeedbackContext): FeedbackLine | null {
+  if (ctx.zone.pull === "normal" || ctx.decision.timing !== "early" || ctx.stormDamage >= 25) return null;
+  return {
+    tone: "good",
+    ruleId: "deep-early",
+    text: "The zone pulled far and you left right away. That's how you beat a deep pull.",
   };
 }
 
@@ -221,7 +243,7 @@ function surgeTag(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "surge-tag",
-    text: "The tag kept you off the bottom of the damage chart. That's the whole point of a tag.",
+    text: "Hitting that team kept you safe from surge. That's exactly what a tag is for.",
   };
 }
 
@@ -231,14 +253,14 @@ function exposureLow(ctx: FeedbackContext): FeedbackLine | null {
     return {
       tone: "good",
       ruleId: "exposure-low",
-      text: "Nobody was in range of that spot. Quiet hold.",
+      text: "No team could reach that spot. Nice and quiet.",
     };
   }
   const noun = ctx.exposure === 1 ? "direction" : "directions";
   return {
     tone: "good",
     ruleId: "exposure-low",
-    text: `Only ${ctx.exposure} ${noun} could hit you. Strong hold.`,
+    text: `Teams could only hit you from ${ctx.exposure} ${noun}. Safe spot.`,
   };
 }
 
@@ -247,7 +269,7 @@ function fightWin(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "fight-win",
-    text: "You won the fight and banked damage. Take those when a third team isn't already in range.",
+    text: "You won the fight and got damage for surge. Take fights like this when no other team is close.",
   };
 }
 
@@ -256,7 +278,7 @@ function latePaid(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "late-paid",
-    text: "Late rotate paid. You farmed and still crossed before the storm mattered.",
+    text: "Leaving late worked. You got mats and still beat the storm.",
   };
 }
 
@@ -268,7 +290,7 @@ function deadSideQuiet(ctx: FeedbackContext): FeedbackLine | null {
   return {
     tone: "good",
     ruleId: "dead-side-quiet",
-    text: "You took the dead side and didn't donate a fight. Use the quiet to refresh, then watch the next pull.",
+    text: "You took the quiet side and didn't start a fight. Use the calm to heal up, then watch where the next zone goes.",
   };
 }
 
@@ -282,9 +304,9 @@ function edgePullDelta(ctx: FeedbackContext): number | null {
 }
 
 export function describeCall(decision: Decision, sector: SectorInfo | null, heldCenter: boolean): string {
-  const when = { early: "Rotate early", standard: "Rotate on time", late: "Rotate late" }[decision.timing];
-  const how = { avoid: "avoid fights", tag: "look for a tag", fight: "take a fight" }[decision.engagement];
-  const where = heldCenter ? "through center" : sector ? `toward the ${sectorName(sector.index)} side` : "to your pin";
+  const when = { early: "Go right away", standard: "Wait a bit, then go", late: "Loot first, then go" }[decision.timing];
+  const how = { avoid: "stay away from teams", tag: "hit a team and leave", fight: "go all in on a fight" }[decision.engagement];
+  const where = heldCenter ? "to the middle" : sector ? `to the ${sectorName(sector.index)} side` : "to your pin";
   return `${when} ${where}, ${how}.`;
 }
 

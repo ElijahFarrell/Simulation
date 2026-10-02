@@ -10,10 +10,10 @@ import type { FeedbackTone, PhaseResult, ScoreBreakdown } from "@/engine/types";
 const CALL_ORDER: CallPart[] = ["where", "when", "contact"];
 
 const SCORE_LABELS: Record<ScorePart, string> = {
-  exposure: "Exposure",
-  positioning: "Next pull",
+  exposure: "Who can see you",
+  positioning: "Next zone",
   storm: "Storm",
-  contact: "Result",
+  contact: "The fight",
   surge: "Surge",
 };
 
@@ -96,7 +96,7 @@ function CallPartScores({ part, score, lost }: { part: CallPart; score: ScoreBre
 function ScoreBar({ label, value }: { label: string; value: number }) {
   const width = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className="grid grid-cols-[4.5rem_1fr_2rem] items-center gap-2 text-xs">
+    <div className="grid grid-cols-[7.25rem_1fr_2rem] items-center gap-2 text-xs">
       <span className="text-muted-foreground">{label}</span>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
         <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />

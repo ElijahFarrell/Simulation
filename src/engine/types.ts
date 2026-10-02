@@ -2,10 +2,13 @@ export type Vec = { x: number; y: number };
 
 export type Circle = { center: Vec; radius: number };
 
+export type PullType = "normal" | "deep" | "half";
+
 export type ZonePhase = {
   index: number;
   from: Circle;
   to: Circle;
+  pull: PullType;
   waitSec: number;
   shrinkSec: number;
   isMoving: boolean;
@@ -107,7 +110,7 @@ export type PhaseView = {
   phaseName: PhaseName;
   sectors: SectorInfo[];
   pull: Circle | null;
-  followingRadius: number | null;
+  following: ZonePhase | null;
   teamsAlive: number;
   player: Team;
   heatmapSeed: number;

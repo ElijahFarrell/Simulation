@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from "@/engine/constants";
 import { advancePhase, createGame } from "@/engine/game";
 import { resolveDecision } from "@/engine/step";
-import type { Engagement, GameState, Team, Timing, Vec } from "@/engine/types";
+import type { Engagement, GameState, PullType, Team, Timing, Vec } from "@/engine/types";
 
 export type Overlays = {
   density: boolean;
@@ -27,6 +27,7 @@ export type LabState = {
   settings: LabSettings;
   scenarioId: string | null;
   runId: number;
+  pullGuess: PullType | null;
 };
 
 export type LabAction =
@@ -40,7 +41,8 @@ export type LabAction =
   | { type: "anim-done" }
   | { type: "next" }
   | { type: "toggle"; key: keyof Overlays }
-  | { type: "settings"; settings: LabSettings };
+  | { type: "settings"; settings: LabSettings }
+  | { type: "guess"; pull: PullType };
 
 export const initialLabState: LabState = {
   screen: "menu",
@@ -54,6 +56,7 @@ export const initialLabState: LabState = {
   settings: { ...DEFAULT_SETTINGS, hints: true },
   scenarioId: null,
   runId: 0,
+  pullGuess: null,
 };
 
 export function labReducer(state: LabState, action: LabAction): LabState {
@@ -82,6 +85,9 @@ export function labReducer(state: LabState, action: LabAction): LabState {
       return lockCall(state);
     case "anim-done":
       return { ...state, animating: false, animFrom: null };
+    case "guess":
+      if (state.pullGuess || state.screen !== "play") return state;
+      return { ...state, pullGuess: action.pull };
     case "next":
       return advance(state);
     default:
@@ -101,6 +107,7 @@ function begin(state: LabState, seed: number, scenarioId: string | null): LabSta
     engagement: "avoid",
     animating: false,
     animFrom: null,
+    pullGuess: null,
   };
 }
 
@@ -124,5 +131,6 @@ function advance(state: LabState): LabState {
     game: advancePhase(state.game),
     destination: null,
     animFrom: null,
+    pullGuess: null,
   };
 }

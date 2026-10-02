@@ -8,6 +8,7 @@ function phase(ruleId: string, total: number): PhaseResult {
       index: 1,
       from: { center: { x: 0, y: 0 }, radius: 1 },
       to: { center: { x: 0, y: 0 }, radius: 1 },
+      pull: "normal",
       waitSec: 1,
       shrinkSec: 1,
       isMoving: false,

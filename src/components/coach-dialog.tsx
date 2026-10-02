@@ -31,8 +31,8 @@ export function CoachDialog({
           <DialogTitle>Coach</DialogTitle>
           <DialogDescription>
             {context.focusZone === null
-              ? "Find the habit that cost you the most this game."
-              : `Find what cost you on zone ${context.focusZone}, and what to call next.`}
+              ? "Find the habit that cost you the most."
+              : `What cost you on zone ${context.focusZone}, and what to do next.`}
           </DialogDescription>
         </DialogHeader>
         <CoachChat chat={chat} context={context} />
@@ -76,9 +76,9 @@ function CoachChat({ chat, context }: { chat: Chat<UIMessage>; context: CoachCon
         {messages.length === 0 ? (
           <div className="grid gap-3">
             <p className="text-sm text-muted-foreground">
-              Every call is three choices: where you hold, when you leave, and what you do on contact. The coach
-              finds the one that cost you, gives you the rule, and the call to try next. It can also search the
-              web for the real game.
+              Every zone is three choices: where you go, when you leave, and what you do if you meet a team.
+              The coach tells you which one cost you, the rule to remember, and what to try next. It can also
+              look up the real game.
             </p>
             <div className="flex flex-wrap gap-2">
               {coachStarters(context).map((starter) => (

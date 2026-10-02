@@ -40,7 +40,7 @@ describe("buildCoachContext", () => {
     const [zone] = context.zones;
     expect(zone?.timing).toBe("late");
     expect(zone?.engagement).toBe("tag");
-    expect(zone?.call).toContain("Rotate late");
+    expect(zone?.call).toContain("Loot first, then go");
     expect(Number.isInteger(zone?.score.storm)).toBe(true);
     expect(zone?.pointsLost).toEqual(pointsLost(game.history[0]!.score));
   });

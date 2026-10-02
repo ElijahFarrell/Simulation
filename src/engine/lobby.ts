@@ -1,5 +1,7 @@
 import {
   DEFAULT_SETTINGS,
+  MAX_TEAMS,
+  MIN_TEAMS,
   START_HEALS,
   START_HP,
   START_MATS,
@@ -14,7 +16,7 @@ export function normalizeSettings(settings?: Partial<GameSettings>): GameSetting
   const teamCount = Math.round(settings?.teamCount ?? DEFAULT_SETTINGS.teamCount);
   const fighterWeight = settings?.fighterWeight ?? DEFAULT_SETTINGS.fighterWeight;
   return {
-    teamCount: Math.min(45, Math.max(12, teamCount)),
+    teamCount: Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teamCount)),
     fighterWeight: Math.min(0.6, Math.max(0, fighterWeight)),
   };
 }

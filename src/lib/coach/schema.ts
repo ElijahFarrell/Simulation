@@ -12,6 +12,7 @@ const scoreSchema = z.object({
 const zoneCallSchema = z.object({
   zone: z.number().int(),
   moving: z.boolean(),
+  pull: z.enum(["normal", "deep", "half"]),
   surgeActive: z.boolean(),
   stormDps: z.number(),
   call: z.string().max(200),

@@ -88,6 +88,7 @@ describe("movement timing", () => {
       index: 6,
       from: { center: { x: 500, y: 500 }, radius: 100 },
       to: { center: { x: 560, y: 500 }, radius: 40 },
+      pull: "half",
       waitSec: 24,
       shrinkSec: 16,
       isMoving: true,
@@ -107,6 +108,7 @@ describe("surge", () => {
     index: 3,
     from: { center: { x: 0, y: 0 }, radius: 10 },
     to: { center: { x: 0, y: 0 }, radius: 8 },
+    pull: "normal",
     waitSec: 1,
     shrinkSec: 1,
     isMoving: false,
@@ -183,7 +185,7 @@ describe("analysis", () => {
       const zone = game.zones[3];
       const following = game.zones[4];
       if (!zone || !following) throw new Error("missing zones");
-      const centers = sampleFutureCenters(zone.to, following.to.radius, seed + 50);
+      const centers = sampleFutureCenters(zone.to, following, seed + 50);
       const edge = {
         x: zone.to.center.x + zone.to.radius * 0.95,
         y: zone.to.center.y,
@@ -218,6 +220,7 @@ describe("feedback", () => {
         index: 4,
         from: { center: { x: 0, y: 0 }, radius: 10 },
         to: { center: { x: 0, y: 0 }, radius: 8 },
+        pull: "normal",
         waitSec: 10,
         shrinkSec: 10,
         isMoving: false,

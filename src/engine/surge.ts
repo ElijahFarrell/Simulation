@@ -32,8 +32,8 @@ export function applySurge(teams: Team[], zone: ZonePhase): SurgeResult {
     playerHit = true;
     events.push(
       team.eliminated
-        ? "Surge finished your trio"
-        : `Surge hit you for ${amount} — not enough damage dealt`,
+        ? "Surge damage knocked out your team"
+        : `Surge hit you for ${amount}. Your team did too little damage`,
     );
   }
 

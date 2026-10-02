@@ -35,7 +35,7 @@ export function coachStarters(context: CoachContext): string[] {
   }
   return [
     `What cost me the most on zone ${focus.zone}?`,
-    "What should I call next time?",
+    "What should I do next time?",
     "How do pros play a zone like this?",
   ];
 }
@@ -48,6 +48,7 @@ function describeZoneCall(phase: PhaseResult): CoachZoneCall {
   return {
     zone: phase.zone.index,
     moving: phase.zone.isMoving,
+    pull: phase.zone.pull,
     surgeActive: phase.zone.surgeActive,
     stormDps: phase.zone.stormDps,
     call: describeCall(phase.decision, sector, center),

@@ -5,7 +5,7 @@ import type { Overlays } from "@/components/lab-state";
 
 const TOGGLES: { key: keyof Overlays; label: string }[] = [
   { key: "density", label: "Sides" },
-  { key: "pull", label: "Next pull" },
+  { key: "pull", label: "Dashed ring" },
   { key: "heatmap", label: "Heat" },
 ];
 
