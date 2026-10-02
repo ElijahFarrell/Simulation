@@ -30,7 +30,9 @@ export function CoachDialog({
         <DialogHeader>
           <DialogTitle>Coach</DialogTitle>
           <DialogDescription>
-            {context.focusZone === null ? "Ask about this game." : `Ask about zone ${context.focusZone} or anything else.`}
+            {context.focusZone === null
+              ? "Find the habit that cost you the most this game."
+              : `Find what cost you on zone ${context.focusZone}, and what to call next.`}
           </DialogDescription>
         </DialogHeader>
         <CoachChat chat={chat} context={context} />
@@ -72,15 +74,28 @@ function CoachChat({ chat, context }: { chat: Chat<UIMessage>; context: CoachCon
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div ref={scrollRef} className="-mx-1 grid min-h-24 flex-1 content-start gap-3 overflow-y-auto px-1">
         {messages.length === 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {coachStarters(context).map((starter) => (
-              <Button key={starter} type="button" variant="outline" size="sm" disabled={locked} onClick={() => ask(starter)}>
-                {starter}
-              </Button>
-            ))}
+          <div className="grid gap-3">
+            <p className="text-sm text-muted-foreground">
+              Every call is three choices: where you hold, when you leave, and what you do on contact. The coach
+              finds the one that cost you, gives you the rule, and the call to try next. It can also search the
+              web for the real game.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {coachStarters(context).map((starter) => (
+                <Button key={starter} type="button" variant="outline" size="sm" disabled={locked} onClick={() => ask(starter)}>
+                  {starter}
+                </Button>
+              ))}
+            </div>
           </div>
         ) : (
-          messages.map((message) => <CoachMessage key={message.id} message={message} />)
+          messages.map((message, index) => (
+            <CoachMessage
+              key={message.id}
+              message={message}
+              streaming={status === "streaming" && index === messages.length - 1}
+            />
+          ))
         )}
         {status === "submitted" ? <p className="text-xs text-muted-foreground motion-safe:animate-pulse">Thinking…</p> : null}
         {error && !locked ? <ErrorNotice error={error} onRetry={() => void regenerate(options(passcode))} /> : null}
