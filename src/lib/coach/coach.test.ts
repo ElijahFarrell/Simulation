@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STORM_DAMAGE_CAP } from "@/engine/constants";
 import { createGame } from "@/engine/game";
+import { pointsLost } from "@/engine/scoring";
 import { resolveDecision } from "@/engine/step";
 import type { GameState } from "@/engine/types";
 import { checkPasscode } from "./access";
@@ -41,13 +42,13 @@ describe("buildCoachContext", () => {
     expect(zone?.engagement).toBe("tag");
     expect(zone?.call).toContain("Rotate late");
     expect(Number.isInteger(zone?.score.storm)).toBe(true);
+    expect(zone?.pointsLost).toEqual(pointsLost(game.history[0]!.score));
   });
 
   it("asks about the focused zone, or the whole game without one", () => {
     const game = playedZone(7);
-    const total = game.history[0]?.score.total;
-    expect(coachStarters(buildCoachContext(game, 1))[0]).toBe(`Why did zone 1 score ${total}?`);
-    expect(coachStarters(buildCoachContext(game, null))[0]).toBe("What was my biggest mistake this game?");
+    expect(coachStarters(buildCoachContext(game, 1))[0]).toBe("What cost me the most on zone 1?");
+    expect(coachStarters(buildCoachContext(game, null))[0]).toBe("What habit cost me the most this game?");
   });
 });
 
@@ -58,6 +59,7 @@ describe("buildInstructions", () => {
 
     expect(instructions).toContain(`at ${STORM_DAMAGE_CAP} storm damage`);
     expect(instructions).toContain("storm-heavy:");
+    expect(instructions).toContain("**Biggest leak:");
     expect(instructions).toContain(JSON.stringify(context));
   });
 });

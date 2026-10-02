@@ -1,6 +1,7 @@
 import { SECTOR_COUNT, sectorName } from "@/engine/constants";
 import { describeCall, heldCenter } from "@/engine/feedback";
 import { sectorIndex } from "@/engine/geometry";
+import { pointsLost } from "@/engine/scoring";
 import type { GameState, PhaseResult, ScoreBreakdown } from "@/engine/types";
 import type { CoachContext, CoachZoneCall } from "./schema";
 
@@ -27,15 +28,15 @@ export function coachStarters(context: CoachContext): string[] {
   const focus = context.zones.find((zone) => zone.zone === context.focusZone);
   if (!focus) {
     return [
-      "What was my biggest mistake this game?",
+      "What habit cost me the most this game?",
       "Which zone should I replay, and what should I call?",
       "How do pros handle surge in trios right now?",
     ];
   }
   return [
-    `Why did zone ${focus.zone} score ${focus.score.total}?`,
-    "What should I have called instead?",
-    "How do pros play this kind of zone right now?",
+    `What cost me the most on zone ${focus.zone}?`,
+    "What should I call next time?",
+    "How do pros play a zone like this?",
   ];
 }
 
@@ -54,6 +55,7 @@ function describeZoneCall(phase: PhaseResult): CoachZoneCall {
     engagement: phase.decision.engagement,
     side: sector ? { name: sectorName(sector.index), label: sector.label, teams: sector.teamCount } : null,
     score: roundScore(phase.score),
+    pointsLost: pointsLost(phase.score),
     feedback: phase.feedback.map(({ tone, text }) => ({ tone, text })),
     events: phase.events,
   };

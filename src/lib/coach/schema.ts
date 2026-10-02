@@ -25,6 +25,7 @@ const zoneCallSchema = z.object({
     })
     .nullable(),
   score: scoreSchema,
+  pointsLost: z.object({ where: z.number(), when: z.number(), contact: z.number() }),
   feedback: z
     .array(z.object({ tone: z.enum(["good", "warn", "bad"]), text: z.string().max(300) }))
     .max(8),
