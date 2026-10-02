@@ -26,6 +26,7 @@ export type LabState = {
   animFrom: Team[] | null;
   settings: LabSettings;
   scenarioId: string | null;
+  runId: number;
 };
 
 export type LabAction =
@@ -52,6 +53,7 @@ export const initialLabState: LabState = {
   animFrom: null,
   settings: { ...DEFAULT_SETTINGS, hints: true },
   scenarioId: null,
+  runId: 0,
 };
 
 export function labReducer(state: LabState, action: LabAction): LabState {
@@ -92,6 +94,7 @@ function begin(state: LabState, seed: number, scenarioId: string | null): LabSta
     ...state,
     screen: "play",
     scenarioId,
+    runId: state.runId + 1,
     game: createGame(seed, state.settings),
     destination: null,
     timing: "standard",

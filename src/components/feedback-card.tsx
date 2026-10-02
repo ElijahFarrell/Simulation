@@ -1,5 +1,6 @@
 "use client";
 
+import { MessageCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FeedbackTone, PhaseResult } from "@/engine/types";
@@ -14,10 +15,12 @@ export function FeedbackCard({
   result,
   canAdvance,
   onNext,
+  onAsk,
 }: {
   result: PhaseResult;
   canAdvance: boolean;
   onNext: () => void;
+  onAsk: () => void;
 }) {
   return (
     <Card>
@@ -48,13 +51,17 @@ export function FeedbackCard({
           </ul>
         ) : null}
       </CardContent>
-      {canAdvance ? (
-        <CardFooter>
-          <Button type="button" className="w-full" onClick={onNext}>
+      <CardFooter className="gap-2">
+        <Button type="button" variant="outline" className={canAdvance ? "" : "w-full"} onClick={onAsk}>
+          <MessageCircleIcon data-icon="inline-start" />
+          Ask coach
+        </Button>
+        {canAdvance ? (
+          <Button type="button" className="flex-1" onClick={onNext}>
             Next zone
           </Button>
-        </CardFooter>
-      ) : null}
+        ) : null}
+      </CardFooter>
     </Card>
   );
 }
