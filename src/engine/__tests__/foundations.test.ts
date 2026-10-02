@@ -44,16 +44,38 @@ describe("generateZones", () => {
     expect(a).toEqual(b);
   });
 
-  it("keeps every next circle inside the previous one and on the map", () => {
+  it("has the live storm's shape: 12 zones, 7 to 11 moving", () => {
+    const zones = generateZones(createRng(3));
+    expect(zones).toHaveLength(12);
+    expect(zones.filter((zone) => zone.isMoving).map((zone) => zone.index)).toEqual([7, 8, 9, 10, 11]);
+  });
+
+  it("keeps still zones inside the old circle, lets moving zones leave it, and stays on the map", () => {
+    const pulls = new Set<string>();
+    let leftOldCircle = false;
     for (let seed = 1; seed <= 25; seed += 1) {
-      const zones = generateZones(createRng(seed));
-      for (const zone of zones) {
-        expect(circleContainsCircle(zone.from, zone.to)).toBe(true);
+      for (const zone of generateZones(createRng(seed))) {
+        pulls.add(zone.pull);
         expect(circleOnMap(zone.to)).toBe(true);
         expect(zone.to.center.x).toBeGreaterThanOrEqual(0);
         expect(zone.to.center.x).toBeLessThanOrEqual(MAP_SIZE);
+        if (!zone.isMoving) expect(circleContainsCircle(zone.from, zone.to)).toBe(true);
+        else if (!circleContainsCircle(zone.from, zone.to)) leftOldCircle = true;
+        if (!zone.isMoving) expect(zone.pull).not.toBe("half");
       }
-      expect(zones.some((zone) => zone.isMoving)).toBe(true);
+    }
+    expect([...pulls].sort()).toEqual(["deep", "half", "normal"]);
+    expect(leftOldCircle).toBe(true);
+  });
+
+  it("puts a deep pull against the old edge and a half pull on it", () => {
+    for (let seed = 1; seed <= 25; seed += 1) {
+      for (const zone of generateZones(createRng(seed))) {
+        const shift = dist(zone.from.center, zone.to.center);
+        const inside = zone.from.radius - zone.to.radius;
+        if (zone.pull === "deep" && inside > 1) expect(shift).toBeGreaterThan(inside * 0.8);
+        if (zone.pull === "half") expect(shift).toBeGreaterThan(inside);
+      }
     }
   });
 });

@@ -55,7 +55,7 @@ function resolvePlayer(
   if (!target) {
     const whiff = decision.engagement !== "avoid";
     return {
-      events: whiff ? ["Nobody was close enough to touch"] : [],
+      events: whiff ? ["Nobody was close enough to hit"] : [],
       outcome: whiff ? "whiff" : "none",
       thirdPartied: false,
       knocked: 0,
@@ -81,7 +81,7 @@ function tryAvoid(
   const chance = Math.max(0.22, AVOID_ESCAPE_CHANCE - 0.14 * (contactCount - 1));
   if (rng.chance(chance)) {
     return {
-      events: [`Slipped past ${contactCount} team${contactCount === 1 ? "" : "s"}`],
+      events: [`You snuck past ${contactCount} team${contactCount === 1 ? "" : "s"}`],
       outcome: "escaped",
       thirdPartied: false,
       knocked: 0,
@@ -91,7 +91,7 @@ function tryAvoid(
   return {
     ...forced,
     outcome: forced.outcome === "win" ? "forced" : "loss",
-    events: [`Avoid failed — forced fight with ${label(target)}`, ...forced.events],
+    events: [`You tried to stay away, but ${label(target)} caught you`, ...forced.events],
   };
 }
 
@@ -120,8 +120,8 @@ function tagTarget(
     thirdPartied = true;
     applyChip(player, 48);
   }
-  const events = [`Tagged ${label(target)} for surge`];
-  if (thirdPartied) events.push("Extra teams were close enough to punish the tag");
+  const events = [`You hit ${label(target)} and then left`];
+  if (thirdPartied) events.push("Other teams were close and shot back");
   return { events, outcome: "tag", thirdPartied, knocked: 0 };
 }
 
@@ -150,10 +150,10 @@ function commitFight(
   const won = result.winner.id === player.id;
   const events = [
     won
-      ? `Fought ${label(target)} — won, knocked ${result.knocks}`
-      : `Fought ${label(target)} — lost ${result.knocks}`,
+      ? `You fought ${label(target)} and won (${result.knocks} knocked)`
+      : `You fought ${label(target)} and lost ${result.knocks} of your players`,
   ];
-  if (thirdPartied && third) events.push(`${label(third)} third-partied the fight`);
+  if (thirdPartied && third) events.push(`${label(third)} jumped into your fight (third party)`);
   return {
     events,
     outcome: won ? winOutcome : lossOutcome,

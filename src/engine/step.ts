@@ -148,10 +148,9 @@ function gradePhase(input: {
   matsBeforeFight: number;
 }): PhaseResult {
   const following = input.state.zones[input.state.phaseIndex + 1];
-  const afterRadius = following?.to.radius ?? input.zone.to.radius;
   const seed = input.state.seed + input.state.phaseIndex * 997 + 13;
   const positioning = following
-    ? positioningScore(input.player.pos, input.zone.to, afterRadius, seed).score
+    ? positioningScore(input.player.pos, input.zone.to, following, seed).score
     : dist(input.player.pos, input.zone.to.center) <= input.zone.to.radius
       ? 100
       : 35;
@@ -189,7 +188,7 @@ function gradePhase(input: {
     input.stormDamage >= 8 ? `Took ${Math.round(input.stormDamage)} storm damage` : null,
     ...input.combat.events,
     ...input.surgeEvents,
-    input.player.eliminated ? "Your trio is eliminated" : null,
+    input.player.eliminated ? "Your team got knocked out" : null,
   ].filter((event): event is string => event !== null);
 
   return {

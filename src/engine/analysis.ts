@@ -1,13 +1,15 @@
 import {
   DEAD_MAX,
   EXPOSURE_RADIUS,
+  HALF_PULL_REACH,
   MC_SAMPLES,
   SECTOR_COUNT,
   STACKED_MIN,
 } from "./constants";
-import { dist, pointInCircle, sampleDisc, sectorIndex } from "./geometry";
+import { dist, pointInCircle, sectorIndex } from "./geometry";
 import { createRng } from "./rng";
 import type { Circle, SectorInfo, Team, Vec, ZonePhase } from "./types";
+import { placeNextZone } from "./zones";
 
 export function sectorDensity(teams: readonly Team[], nextZone: Circle): SectorInfo[] {
   const counts = Array.from({ length: SECTOR_COUNT }, () => 0);
@@ -49,7 +51,9 @@ export function pullRegion(
   following: ZonePhase | undefined,
 ): Circle | null {
   if (!following) return null;
-  const radius = current.to.radius - following.to.radius;
+  const radius = following.isMoving
+    ? current.to.radius * HALF_PULL_REACH[1]
+    : current.to.radius - following.to.radius;
   if (radius <= 0) return null;
   return { center: current.to.center, radius };
 }
@@ -73,15 +77,11 @@ export function exposureDirections(
   return seen.size;
 }
 
-export function sampleFutureCenters(
-  nextZone: Circle,
-  afterRadius: number,
-  seed: number,
-): Vec[] {
+export function sampleFutureCenters(nextZone: Circle, following: ZonePhase, seed: number): Vec[] {
   const rng = createRng(seed >>> 0);
-  const maxShift = Math.max(0, nextZone.radius - afterRadius);
-  return Array.from({ length: MC_SAMPLES }, () =>
-    sampleDisc(rng, nextZone.center, maxShift),
+  return Array.from(
+    { length: MC_SAMPLES },
+    () => placeNextZone(rng, nextZone, following.to.radius, following.isMoving).center,
   );
 }
 
@@ -101,12 +101,9 @@ export function expectedDistance(
 
 export type HeatCell = { x: number; y: number; distance: number };
 
-export function positioningGrid(
-  nextZone: Circle,
-  afterRadius: number,
-  seed: number,
-): HeatCell[] {
-  const centers = sampleFutureCenters(nextZone, afterRadius, seed);
+export function positioningGrid(nextZone: Circle, following: ZonePhase, seed: number): HeatCell[] {
+  const centers = sampleFutureCenters(nextZone, following, seed);
+  const afterRadius = following.to.radius;
   const cells: HeatCell[] = [];
   const steps = 16;
   const minX = nextZone.center.x - nextZone.radius;
@@ -132,10 +129,11 @@ export function positioningGrid(
 export function positioningScore(
   point: Vec,
   nextZone: Circle,
-  afterRadius: number,
+  following: ZonePhase,
   seed: number,
 ): { score: number; expected: number; best: number } {
-  const centers = sampleFutureCenters(nextZone, afterRadius, seed);
+  const centers = sampleFutureCenters(nextZone, following, seed);
+  const afterRadius = following.to.radius;
   const mine = expectedDistance(point, centers, afterRadius);
   const candidates = [nextZone.center];
   for (let i = 0; i < SECTOR_COUNT; i += 1) {

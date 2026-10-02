@@ -40,7 +40,7 @@ export function SessionSummary({
         <DialogHeader>
           <DialogTitle>{won ? "You won the lobby" : `You placed ${ordinal(place)}`}</DialogTitle>
           <DialogDescription>
-            Average call score {average} across {game.history.length} zones. Seed {game.seed}.
+            Average score {average} over {game.history.length} zones. Seed {game.seed}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
@@ -57,11 +57,11 @@ export function SessionSummary({
           </div>
           {habit ? (
             <p className="text-sm">
-              <span className="font-medium">Repeated miss: </span>
+              <span className="font-medium">You keep doing this: </span>
               {habit.lesson}
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">No repeated miss this game. Look at the warns anyway.</p>
+            <p className="text-sm text-muted-foreground">Nothing big went wrong more than once. Still read the notes.</p>
           )}
         </div>
         <DialogFooter className="sm:justify-between">

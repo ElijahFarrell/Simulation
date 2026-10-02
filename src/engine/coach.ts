@@ -3,15 +3,15 @@ import type { PhaseView } from "./types";
 
 export function coachHint(view: PhaseView): string {
   if (view.zone.surgeActive && view.player.damageThisPhase === 0) {
-    return "Surge is live and you have no damage this zone. Tag someone on the way in if a full fight would drain your mats.";
+    return "Surge is on and your team has no damage yet. Hit a team on the way, then leave. You don't need a full fight.";
   }
   if (view.zone.isMoving) {
-    return "Moving zone. If you are on the side it is leaving, rotate early — the old circle is still safe during the wait.";
+    return "This zone moves. If you are on the side it's leaving, go early while the old circle is still safe.";
   }
   const quietest = [...view.sectors].sort((a, b) => a.teamCount - b.teamCount)[0];
   if (quietest && quietest.label === "dead") {
     const side = sectorName(quietest.index);
-    return `The ${side} side is the quietest right now. It stays quiet only until the next pull. If you finish outside the dashed circle, that whole side has to run together.`;
+    return `The ${side} side has the fewest teams. It stays quiet until the next zone shows up. If that zone goes the other way, everyone there has to run at once.`;
   }
-  return "Pin a spot, then choose when you leave and whether you want a fight. Early moves during the wait. Late farms mats and risks storm.";
+  return "Tap the map to pick where you go. Then pick when you leave and what you do if you meet a team.";
 }

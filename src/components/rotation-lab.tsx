@@ -77,8 +77,8 @@ export function RotationLab() {
 
   const view = useMemo(() => (game ? getPhaseView(game) : null), [game]);
   const heatmap = useMemo(() => {
-    if (!view || !state.overlays.heatmap || view.followingRadius === null) return null;
-    return positioningGrid(view.zone.to, view.followingRadius, view.heatmapSeed);
+    if (!view || !state.overlays.heatmap || !view.following) return null;
+    return positioningGrid(view.zone.to, view.following, view.heatmapSeed);
   }, [state.overlays.heatmap, view]);
 
   if (state.screen === "menu" || !game || !view) {
@@ -101,7 +101,7 @@ export function RotationLab() {
       : null;
   const call = state.destination
     ? describeCall(draft(state), sector, centerHold)
-    : "Click the map to pin the rotate.";
+    : "Tap the map to pick where you go.";
   const showFeedback = !state.animating && last && game.status !== "deciding";
   const scenario = scenarioById(state.scenarioId);
   const summaryKey =
@@ -150,7 +150,11 @@ export function RotationLab() {
         </div>
         <div className="grid gap-3">
           {scenario ? <p className="text-sm text-muted-foreground">{scenario.lesson}</p> : null}
-          <StatePanel view={view} teamsAlive={view.teamsAlive} />
+          <StatePanel
+            view={view}
+            teamsAlive={view.teamsAlive}
+            revealPull={!state.settings.hints || state.pullGuess !== null}
+          />
           {showFeedback && last ? (
             <FeedbackCard
               result={last}
@@ -163,11 +167,19 @@ export function RotationLab() {
               timing={state.timing}
               engagement={state.engagement}
               call={call}
-              hint={state.settings.hints && game.status === "deciding" ? coachHint(view) : null}
+              hint={
+                state.settings.hints && game.status === "deciding" && state.pullGuess
+                  ? coachHint(view)
+                  : null
+              }
+              pull={view.zone.pull}
+              pullGuess={state.pullGuess}
+              showQuiz={state.settings.hints && game.status === "deciding"}
               canLock={state.destination !== null && game.status === "deciding"}
               busy={state.animating}
               onTiming={(timing) => dispatch({ type: "timing", timing })}
               onEngagement={(engagement) => dispatch({ type: "engagement", engagement })}
+              onGuess={(pull) => dispatch({ type: "guess", pull })}
               onLock={() => dispatch({ type: "lock" })}
             />
           )}

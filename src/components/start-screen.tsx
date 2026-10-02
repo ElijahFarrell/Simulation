@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import type { LabSettings } from "@/components/lab-state";
+import { MAX_TEAMS, MIN_TEAMS, ZONE_TABLE } from "@/engine/constants";
 import { SCENARIOS } from "@/engine/scenarios";
 import type { SavedStats } from "@/lib/review";
 import { lifetimeHabit } from "@/lib/review";
@@ -28,11 +29,11 @@ export function StartScreen({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
       <header className="grid gap-2">
-        <p className="text-sm font-medium text-muted-foreground">Trios IGL practice</p>
+        <p className="text-sm font-medium text-muted-foreground">Trios practice</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Rotation Lab</h1>
         <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-          Make the call before the zone does. Each rep is one reveal: where you hold, when you leave, and
-          whether you fight. The grade is dead side, the next pull, surge, and storm.
+          Each zone you make three choices: where you go, when you leave, and what you do if you meet a
+          team. There are {ZONE_TABLE.length} zones, like a real game. Name the pull, then make the move.
         </p>
       </header>
 
@@ -40,8 +41,8 @@ export function StartScreen({
         <CardHeader>
           <CardTitle>Start a lobby</CardTitle>
           <CardDescription>
-            White ring is the storm now. Blue ring is where you have to end. Dashed ring is where the next
-            zone can spawn. Green is a dead side, red is stacked.
+            White ring is the storm right now. Blue ring is where you need to end up. Dashed ring is where
+            the next zone can land. Green means few teams. Red means lots of teams.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -57,13 +58,13 @@ export function StartScreen({
           </div>
           <div className="grid gap-2">
             <div className="flex items-center justify-between text-sm">
-              <Label htmlFor="teams">Teams</Label>
+              <Label htmlFor="teams">Teams (3 players each, {MAX_TEAMS} max)</Label>
               <span className="tabular-nums text-muted-foreground">{settings.teamCount}</span>
             </div>
             <Slider
               id="teams"
-              min={16}
-              max={40}
+              min={MIN_TEAMS}
+              max={MAX_TEAMS}
               step={1}
               value={[settings.teamCount]}
               onValueChange={(value) => {

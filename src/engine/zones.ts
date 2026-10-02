@@ -1,32 +1,48 @@
-import { INITIAL_RADIUS, MAP_SIZE, ZONE_TABLE } from "./constants";
+import {
+  DEEP_PULL_REACH,
+  HALF_PULL_REACH,
+  INITIAL_RADIUS,
+  MAP_SIZE,
+  NORMAL_PULL_REACH,
+  PULL_ODDS,
+  ZONE_TABLE,
+} from "./constants";
 import { clamp, sampleDisc } from "./geometry";
 import type { Rng } from "./rng";
-import type { Circle, PhaseName, Vec, ZonePhase } from "./types";
+import type { Circle, PhaseName, PullType, Vec, ZonePhase } from "./types";
 
-function clampCenter(center: Vec, radius: number, parent: Circle): Vec {
-  const maxShift = Math.max(0, parent.radius - radius);
-  let dx = center.x - parent.center.x;
-  let dy = center.y - parent.center.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance > maxShift && distance > 0) {
-    dx *= maxShift / distance;
-    dy *= maxShift / distance;
-  }
+export type PlacedZone = { center: Vec; pull: PullType };
 
-  let x = parent.center.x + dx;
-  let y = parent.center.y + dy;
-  x = clamp(x, radius, MAP_SIZE - radius);
-  y = clamp(y, radius, MAP_SIZE - radius);
+export function placeNextZone(rng: Rng, parent: Circle, radius: number, isMoving: boolean): PlacedZone {
+  const pull = rollPull(rng, isMoving);
+  const center = pullCenter(rng, parent, radius, pull);
+  return {
+    center: {
+      x: clamp(center.x, radius, MAP_SIZE - radius),
+      y: clamp(center.y, radius, MAP_SIZE - radius),
+    },
+    pull,
+  };
+}
 
-  dx = x - parent.center.x;
-  dy = y - parent.center.y;
-  const pulled = Math.hypot(dx, dy);
-  if (pulled > maxShift && pulled > 0) {
-    dx *= maxShift / pulled;
-    dy *= maxShift / pulled;
-  }
+function rollPull(rng: Rng, isMoving: boolean): PullType {
+  const odds = isMoving ? PULL_ODDS.moving : PULL_ODDS.still;
+  const roll = rng.next();
+  if (roll < odds.normal) return "normal";
+  if (roll < odds.normal + odds.deep) return "deep";
+  return "half";
+}
 
-  return { x: parent.center.x + dx, y: parent.center.y + dy };
+function pullCenter(rng: Rng, parent: Circle, radius: number, pull: PullType): Vec {
+  const inside = Math.max(0, parent.radius - radius);
+  if (pull === "normal") return sampleDisc(rng, parent.center, inside * NORMAL_PULL_REACH);
+  const distance =
+    pull === "deep" ? inside * rng.range(...DEEP_PULL_REACH) : parent.radius * rng.range(...HALF_PULL_REACH);
+  const theta = rng.range(0, Math.PI * 2);
+  return {
+    x: parent.center.x + Math.cos(theta) * distance,
+    y: parent.center.y + Math.sin(theta) * distance,
+  };
 }
 
 export function generateZones(rng: Rng): ZonePhase[] {
@@ -36,40 +52,27 @@ export function generateZones(rng: Rng): ZonePhase[] {
   };
 
   return ZONE_TABLE.map((row, index) => {
-    const maxShift = Math.max(0, previous.radius - row.radius);
-    const nextCenter = row.isMoving
-      ? movingCenter(rng, previous.center, maxShift)
-      : sampleDisc(rng, previous.center, maxShift);
-    const to: Circle = {
-      center: clampCenter(nextCenter, row.radius, previous),
-      radius: row.radius,
-    };
+    const placed = placeNextZone(rng, previous, row.radius, row.isMoving);
     const phase: ZonePhase = {
       index: index + 1,
       from: previous,
-      to,
+      to: { center: placed.center, radius: row.radius },
+      pull: placed.pull,
       waitSec: row.waitSec,
       shrinkSec: row.shrinkSec,
       isMoving: row.isMoving,
       surgeActive: row.surgeActive,
       stormDps: row.stormDps,
     };
-    previous = to;
+    previous = phase.to;
     return phase;
   });
 }
 
-function movingCenter(rng: Rng, origin: Vec, maxShift: number): Vec {
-  const shift = maxShift * rng.range(0.75, 1);
-  const theta = rng.range(0, Math.PI * 2);
-  return {
-    x: origin.x + Math.cos(theta) * shift,
-    y: origin.y + Math.sin(theta) * shift,
-  };
-}
+const ENDGAME_FROM = ZONE_TABLE.findIndex((row) => row.isMoving) + 1;
 
 export function phaseLabel(zone: ZonePhase): PhaseName {
-  if (zone.isMoving) return "Endgame";
+  if (zone.index >= ENDGAME_FROM) return "Endgame";
   if (zone.index <= 2) return "Early";
   return "Mid";
 }
