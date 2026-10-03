@@ -29,6 +29,7 @@ export type Team = {
   heals: number;
   damageThisPhase: number;
   eliminated: boolean;
+  squadSize: number;
 };
 
 export type Timing = "early" | "standard" | "late";
@@ -86,7 +87,11 @@ export type PhaseResult = {
 
 export type GameStatus = "deciding" | "resolved" | "dead" | "won";
 
+export type GameMode = "trios" | "solos";
+
 export type GameSettings = {
+  mode: GameMode;
+  squadSize: number;
   teamCount: number;
   fighterWeight: number;
 };

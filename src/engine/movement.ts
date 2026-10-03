@@ -15,6 +15,11 @@ export function departDelay(timing: Timing, zone: ZonePhase): number {
   return zone.waitSec + zone.shrinkSec * 0.42;
 }
 
+export function positionAt(start: Vec, end: Vec, departSec: number, timeSec: number): Vec {
+  const traveled = Math.max(0, timeSec - departSec) * ROTATE_SPEED;
+  return moveToward(start, end, traveled);
+}
+
 export function circleAt(zone: ZonePhase, timeSec: number): Circle {
   if (timeSec <= zone.waitSec || zone.shrinkSec <= 0) return zone.from;
   const progress = clamp((timeSec - zone.waitSec) / zone.shrinkSec, 0, 1);

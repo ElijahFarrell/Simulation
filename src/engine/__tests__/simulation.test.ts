@@ -3,7 +3,7 @@ import { exposureDirections, expectedDistance, sampleFutureCenters, sectorDensit
 import { START_HEALS } from "../constants";
 import { buildFeedback, type FeedbackContext } from "../feedback";
 import { createGame, advancePhase } from "../game";
-import { simulatePath } from "../movement";
+import { positionAt, simulatePath } from "../movement";
 import { resolveDecision } from "../step";
 import { applySurge } from "../surge";
 import type { Decision, GameState, Team, ZonePhase } from "../types";
@@ -101,6 +101,38 @@ describe("movement timing", () => {
     const late = simulatePath({ start, dest, departSec: zone.waitSec, zone });
     expect(early.stormDamage).toBeLessThan(late.stormDamage);
   });
+
+  it("keeps a late rotate still until the storm has started closing", () => {
+    const start = { x: 0, y: 0 };
+    const end = { x: 100, y: 0 };
+    expect(positionAt(start, end, 10, 9)).toEqual(start);
+    expect(positionAt(start, end, 10, 10).x).toBeCloseTo(0);
+    expect(positionAt(start, end, 10, 12).x).toBeCloseTo(11);
+  });
+
+  it("plays back the same path the storm score used", () => {
+    const zone: ZonePhase = {
+      index: 6,
+      from: { center: { x: 500, y: 500 }, radius: 100 },
+      to: { center: { x: 560, y: 500 }, radius: 40 },
+      pull: "half",
+      waitSec: 24,
+      shrinkSec: 16,
+      isMoving: true,
+      surgeActive: false,
+      stormDps: 10,
+    };
+    const start = { x: 408, y: 500 };
+    const dest = { x: 560, y: 500 };
+    const departSec = zone.waitSec + zone.shrinkSec * 0.42;
+    const sim = simulatePath({ start, dest, departSec, zone });
+    sim.samples.forEach((sample, step) => {
+      const time = Math.min(zone.waitSec + zone.shrinkSec, step);
+      const played = positionAt(start, sim.end, departSec, time);
+      expect(played.x).toBeCloseTo(sample.x);
+      expect(played.y).toBeCloseTo(sample.y);
+    });
+  });
 });
 
 describe("surge", () => {
@@ -128,6 +160,7 @@ describe("surge", () => {
       heals: START_HEALS,
       damageThisPhase: index === 0 ? playerDamage : 400,
       eliminated: false,
+      squadSize: 3,
     }));
   }
 
@@ -164,6 +197,7 @@ describe("analysis", () => {
       heals: 0,
       damageThisPhase: 0,
       eliminated: false,
+      squadSize: 3,
     };
     const teams: Team[] = [
       { ...base, id: "you", isPlayer: true, pos: { x: 500, y: 600 } },
@@ -208,6 +242,7 @@ describe("analysis", () => {
       heals: 0,
       damageThisPhase: 0,
       eliminated: false,
+      squadSize: 3,
     };
     expect(exposureDirections({ x: 900, y: 900 }, [alone], 200)).toBe(0);
   });

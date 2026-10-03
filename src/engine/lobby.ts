@@ -1,11 +1,4 @@
-import {
-  DEFAULT_SETTINGS,
-  MAX_TEAMS,
-  MIN_TEAMS,
-  START_HEALS,
-  START_HP,
-  START_MATS,
-} from "./constants";
+import { DEFAULT_SETTINGS, GAME_MODES, HP_PER_ALIVE, START_HEALS, START_MATS } from "./constants";
 import { clampToMap, sampleDisc } from "./geometry";
 import type { Rng } from "./rng";
 import type { Archetype, GameSettings, Team, ZonePhase } from "./types";
@@ -13,10 +6,14 @@ import type { Archetype, GameSettings, Team, ZonePhase } from "./types";
 const ARCHETYPE_SPREAD = { edge: 0.35, deep: 0.25, passive: 0.2 } as const;
 
 export function normalizeSettings(settings?: Partial<GameSettings>): GameSettings {
-  const teamCount = Math.round(settings?.teamCount ?? DEFAULT_SETTINGS.teamCount);
+  const mode = settings?.mode === "solos" ? "solos" : "trios";
+  const rules = GAME_MODES[mode];
+  const teamCount = Math.round(settings?.teamCount ?? rules.teamCount);
   const fighterWeight = settings?.fighterWeight ?? DEFAULT_SETTINGS.fighterWeight;
   return {
-    teamCount: Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, teamCount)),
+    mode,
+    squadSize: rules.squadSize,
+    teamCount: Math.min(rules.maxTeams, Math.max(rules.minTeams, teamCount)),
     fighterWeight: Math.min(0.6, Math.max(0, fighterWeight)),
   };
 }
@@ -24,19 +21,20 @@ export function normalizeSettings(settings?: Partial<GameSettings>): GameSetting
 export function createLobby(
   rng: Rng,
   firstZone: ZonePhase,
-  settings: GameSettings,
+  settings?: Partial<GameSettings>,
 ): Team[] {
+  const resolved = normalizeSettings(settings);
   const anchors = Array.from({ length: 8 }, () =>
     sampleDisc(rng, firstZone.to.center, firstZone.to.radius * 0.8),
   );
 
-  const teams = Array.from({ length: settings.teamCount }, (_, index) => {
+  const teams = Array.from({ length: resolved.teamCount }, (_, index) => {
     const anchor = rng.pick(anchors);
     const pos = clampToMap({
       x: anchor.x + rng.range(-70, 70),
       y: anchor.y + rng.range(-70, 70),
     });
-    return makeTeam(index, pos, rollArchetype(rng, settings.fighterWeight));
+    return makeTeam(index, pos, rollArchetype(rng, resolved.fighterWeight), resolved.squadSize);
   });
 
   const player = teams[0];
@@ -51,18 +49,19 @@ export function createLobby(
   return teams;
 }
 
-function makeTeam(index: number, pos: Team["pos"], archetype: Archetype): Team {
+function makeTeam(index: number, pos: Team["pos"], archetype: Archetype, squadSize: number): Team {
   return {
     id: `t${index}`,
     isPlayer: false,
     archetype,
     pos,
-    alive: 3,
-    hp: START_HP,
+    alive: squadSize,
+    hp: squadSize * HP_PER_ALIVE,
     mats: START_MATS,
     heals: START_HEALS,
     damageThisPhase: 0,
     eliminated: false,
+    squadSize,
   };
 }
 

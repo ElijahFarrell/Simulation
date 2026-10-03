@@ -23,6 +23,7 @@ function team(partial: Partial<Team> & Pick<Team, "archetype" | "pos">): Team {
     heals: 100,
     damageThisPhase: 0,
     eliminated: false,
+    squadSize: 3,
     ...partial,
   };
 }
@@ -34,6 +35,14 @@ describe("lobby", () => {
     expect(teams).toHaveLength(30);
     expect(teams.filter((entry) => entry.isPlayer)).toHaveLength(1);
     expect(teams[0]?.id).toBe("you");
+    expect(teams[0]?.squadSize).toBe(3);
+    expect(teams[0]?.alive).toBe(3);
+  });
+
+  it("builds a solos lobby as 100 players of 1", () => {
+    const teams = createLobby(createRng(8), zone(), { mode: "solos" });
+    expect(teams).toHaveLength(100);
+    expect(teams.every((entry) => entry.squadSize === 1 && entry.alive === 1 && entry.hp === 100)).toBe(true);
   });
 });
 

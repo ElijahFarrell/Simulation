@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import type { LabSettings } from "@/components/lab-state";
-import { MAX_TEAMS, MIN_TEAMS, ZONE_TABLE } from "@/engine/constants";
+import { GAME_MODES, ZONE_TABLE } from "@/engine/constants";
 import { SCENARIOS } from "@/engine/scenarios";
 import type { SavedStats } from "@/lib/review";
 import { lifetimeHabit } from "@/lib/review";
@@ -25,11 +25,12 @@ export function StartScreen({
 }) {
   const [seedText, setSeedText] = useState("");
   const habit = lifetimeHabit(stats);
+  const rules = GAME_MODES[settings.mode];
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
       <header className="grid gap-2">
-        <p className="text-sm font-medium text-muted-foreground">Trios practice</p>
+        <p className="text-sm font-medium text-muted-foreground">Solos and trios practice</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Rotation Lab</h1>
         <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
           Each zone you make three choices: where you go, when you leave, and what you do if you meet a
@@ -57,14 +58,39 @@ export function StartScreen({
             />
           </div>
           <div className="grid gap-2">
+            <Label>Game mode</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={settings.mode === "trios" ? "default" : "outline"}
+                onClick={() =>
+                  onSettings({ ...settings, mode: "trios", teamCount: GAME_MODES.trios.teamCount })
+                }
+              >
+                Trios
+              </Button>
+              <Button
+                type="button"
+                variant={settings.mode === "solos" ? "default" : "outline"}
+                onClick={() =>
+                  onSettings({ ...settings, mode: "solos", teamCount: GAME_MODES.solos.teamCount })
+                }
+              >
+                Solos
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-2">
             <div className="flex items-center justify-between text-sm">
-              <Label htmlFor="teams">Teams (3 players each, {MAX_TEAMS} max)</Label>
+              <Label htmlFor="teams">
+                {`Teams (${rules.squadSize} ${rules.squadSize === 1 ? "player" : "players"} each, ${rules.maxTeams} max)`}
+              </Label>
               <span className="tabular-nums text-muted-foreground">{settings.teamCount}</span>
             </div>
             <Slider
               id="teams"
-              min={MIN_TEAMS}
-              max={MAX_TEAMS}
+              min={rules.minTeams}
+              max={rules.maxTeams}
               step={1}
               value={[settings.teamCount]}
               onValueChange={(value) => {

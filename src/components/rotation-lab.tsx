@@ -3,7 +3,7 @@
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import { CoachDialog } from "@/components/coach-dialog";
+import { CoachPanel } from "@/components/coach-dialog";
 import { DecisionPanel } from "@/components/decision-panel";
 import { FeedbackCard } from "@/components/feedback-card";
 import { initialLabState, labReducer, type Overlays } from "@/components/lab-state";
@@ -24,15 +24,17 @@ import { scenarioById } from "@/engine/scenarios";
 import type { Engagement, Timing } from "@/engine/types";
 import { COACH_API } from "@/lib/coach/constants";
 import { buildCoachContext } from "@/lib/coach/context";
+import type { Place } from "@/lib/island/project";
 import { EMPTY_STATS, mergeStats, readStats, subscribeStats, writeStats } from "@/lib/review";
 
-type CoachState = { open: boolean; focusZone: number | null };
+type IslandView = { imageUrl: string | null; places: Place[] };
 
 export function RotationLab() {
   const [state, dispatch] = useReducer(labReducer, initialLabState);
   const stats = useSyncExternalStore(subscribeStats, readStats, () => EMPTY_STATS);
   const [dismissedSummary, setDismissedSummary] = useState<string | null>(null);
-  const [coach, setCoach] = useState<CoachState>({ open: false, focusZone: null });
+  const [wholeGame, setWholeGame] = useState(false);
+  const [island, setIsland] = useState<IslandView>({ imageUrl: null, places: [] });
   const coachChat = useMemo(
     () =>
       new Chat<UIMessage>({
@@ -56,8 +58,23 @@ export function RotationLab() {
   const finishAnimation = useCallback(() => dispatch({ type: "anim-done" }), []);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/island")
+      .then((response) => response.json())
+      .then((payload: unknown) => {
+        const next = readIsland(payload);
+        if (cancelled || !next) return;
+        setIsland(next);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (coach.open || isTyping(event.target) || state.screen !== "play" || !state.game) return;
+      if (isTyping(event.target) || state.screen !== "play" || !state.game) return;
       const timing = timingKey(event.key);
       if (timing) {
         dispatch({ type: "timing", timing });
@@ -73,7 +90,7 @@ export function RotationLab() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [coach.open, state.game, state.screen]);
+  }, [state.game, state.screen]);
 
   const view = useMemo(() => (game ? getPhaseView(game) : null), [game]);
   const heatmap = useMemo(() => {
@@ -109,8 +126,11 @@ export function RotationLab() {
       ? `${game.seed}:${game.history.length}:${game.status}`
       : null;
 
+  const focusZone = wholeGame ? null : view.zone.index;
+  const others = game.settings.squadSize === 1 ? "players" : "trios";
+
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-4 px-3 py-3 sm:px-5 sm:py-5">
+    <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-4 px-3 py-3 sm:px-5 sm:py-5">
       <header className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-muted-foreground">Rotation Lab</p>
@@ -120,7 +140,7 @@ export function RotationLab() {
           Menu
         </Button>
       </header>
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.2fr)_20rem_22rem]">
         <div className="grid gap-3">
           <div className="relative aspect-square overflow-hidden rounded-xl border bg-[#10141c]">
             <MapErrorBoundary onRestart={() => dispatch({ type: "restart" })}>
@@ -135,6 +155,8 @@ export function RotationLab() {
                 showPull={state.overlays.pull}
                 disabled={game.status !== "deciding" || state.animating}
                 animateFrom={state.animating ? state.animFrom : null}
+                playerTiming={state.timing}
+                imageUrl={island.imageUrl}
                 onPick={(destination) => dispatch({ type: "destination", destination })}
                 onAnimationDone={finishAnimation}
               />
@@ -145,7 +167,7 @@ export function RotationLab() {
               overlays={state.overlays}
               onToggle={(key: keyof Overlays) => dispatch({ type: "toggle", key })}
             />
-            <p className="text-xs text-muted-foreground">You are yellow. Other trios are gray.</p>
+            <p className="text-xs text-muted-foreground">You are yellow. Other {others} are gray.</p>
           </div>
         </div>
         <div className="grid gap-3">
@@ -160,7 +182,7 @@ export function RotationLab() {
               result={last}
               canAdvance={game.status === "resolved"}
               onNext={() => dispatch({ type: "next" })}
-              onAsk={() => setCoach({ open: true, focusZone: last.zone.index })}
+              onAsk={scrollToCoach}
             />
           ) : (
             <DecisionPanel
@@ -203,6 +225,12 @@ export function RotationLab() {
             </div>
           ) : null}
         </div>
+        <CoachPanel
+          chat={coachChat}
+          context={buildCoachContext(game, focusZone, island.places)}
+          wholeGame={wholeGame}
+          onWholeGame={setWholeGame}
+        />
       </div>
       <SessionSummary
         game={game}
@@ -224,17 +252,33 @@ export function RotationLab() {
         }}
         onAsk={() => {
           if (summaryKey) setDismissedSummary(summaryKey);
-          setCoach({ open: true, focusZone: null });
+          setWholeGame(true);
+          scrollToCoach();
         }}
-      />
-      <CoachDialog
-        chat={coachChat}
-        context={buildCoachContext(game, coach.focusZone)}
-        open={coach.open}
-        onOpenChange={(open) => setCoach((current) => ({ ...current, open }))}
       />
     </div>
   );
+}
+
+function scrollToCoach() {
+  document.getElementById("coach")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function readIsland(value: unknown): IslandView | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as { imageUrl?: unknown; places?: unknown };
+  if (record.imageUrl !== null && typeof record.imageUrl !== "string") return null;
+  if (!Array.isArray(record.places)) return null;
+  const places: Place[] = [];
+  for (const entry of record.places) {
+    if (!entry || typeof entry !== "object") return null;
+    const place = entry as { name?: unknown; x?: unknown; y?: unknown };
+    if (typeof place.name !== "string" || typeof place.x !== "number" || typeof place.y !== "number") {
+      return null;
+    }
+    places.push({ name: place.name, x: place.x, y: place.y });
+  }
+  return { imageUrl: record.imageUrl ?? null, places };
 }
 
 function draft(state: { destination: { x: number; y: number } | null; timing: Timing; engagement: Engagement }) {

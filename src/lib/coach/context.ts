@@ -2,13 +2,19 @@ import { SECTOR_COUNT, sectorName } from "@/engine/constants";
 import { describeCall, heldCenter } from "@/engine/feedback";
 import { sectorIndex } from "@/engine/geometry";
 import { pointsLost } from "@/engine/scoring";
+import { nearestPlace, type Place } from "@/lib/island/project";
 import type { GameState, PhaseResult, ScoreBreakdown } from "@/engine/types";
 import type { CoachContext, CoachZoneCall } from "./schema";
 
-export function buildCoachContext(game: GameState, focusZone: number | null): CoachContext {
+export function buildCoachContext(
+  game: GameState,
+  focusZone: number | null,
+  places: readonly Place[] = [],
+): CoachContext {
   const player = game.teams.find((team) => team.isPlayer);
   return {
     seed: game.seed,
+    mode: game.settings.mode,
     status: game.status,
     placement: game.placement,
     lobbySize: game.teams.length,
@@ -20,7 +26,7 @@ export function buildCoachContext(game: GameState, focusZone: number | null): Co
       heals: Math.round(player?.heals ?? 0),
     },
     focusZone,
-    zones: game.history.map(describeZoneCall),
+    zones: game.history.map((phase) => describeZoneCall(phase, places)),
   };
 }
 
@@ -40,7 +46,7 @@ export function coachStarters(context: CoachContext): string[] {
   ];
 }
 
-function describeZoneCall(phase: PhaseResult): CoachZoneCall {
+function describeZoneCall(phase: PhaseResult, places: readonly Place[]): CoachZoneCall {
   const center = heldCenter(phase.decision, phase.zone.to);
   const sector = center
     ? null
@@ -52,6 +58,7 @@ function describeZoneCall(phase: PhaseResult): CoachZoneCall {
     surgeActive: phase.zone.surgeActive,
     stormDps: phase.zone.stormDps,
     call: describeCall(phase.decision, sector, center),
+    place: nearestPlace(places, phase.decision.destination),
     timing: phase.decision.timing,
     engagement: phase.decision.engagement,
     side: sector ? { name: sectorName(sector.index), label: sector.label, teams: sector.teamCount } : null,
