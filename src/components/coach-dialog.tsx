@@ -29,7 +29,7 @@ export function CoachPanel({
     <section
       id="coach"
       aria-label="Coach"
-      className="sticky top-3 flex h-[min(40rem,calc(100dvh-5rem))] flex-col gap-3 rounded-xl border bg-card p-4"
+      className="flex h-[min(24rem,55svh)] flex-col gap-3 overflow-hidden rounded-xl border bg-card p-3 sm:p-4 lg:h-full lg:max-h-full lg:min-h-0"
     >
       <div className="grid gap-2">
         <h2 className="text-base font-semibold">{watching}</h2>

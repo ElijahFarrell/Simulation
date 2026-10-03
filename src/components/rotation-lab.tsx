@@ -130,19 +130,20 @@ export function RotationLab() {
   const others = game.settings.squadSize === 1 ? "players" : "trios";
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-4 px-3 py-3 sm:px-5 sm:py-5">
-      <header className="flex items-center justify-between gap-3">
+    <div className="mx-auto flex min-h-dvh w-full flex-col gap-3 px-3 py-3 sm:px-4 lg:h-dvh lg:max-h-dvh lg:overflow-hidden lg:px-5 lg:py-4">
+      <header className="flex shrink-0 items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-muted-foreground">Rotation Lab</p>
-          <h1 className="text-lg font-semibold">Seed {game.seed}</h1>
+          <p className="text-xs font-medium text-muted-foreground sm:text-sm">Rotation Lab</p>
+          <h1 className="text-lg font-semibold sm:text-xl">Seed {game.seed}</h1>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => dispatch({ type: "menu" })}>
           Menu
         </Button>
       </header>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.2fr)_20rem_22rem]">
-        <div className="grid gap-3">
-          <div className="relative aspect-square overflow-hidden rounded-xl border bg-[#10141c]">
+      <div className="grid items-start gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)_minmax(18rem,24rem)] lg:items-stretch lg:gap-4">
+        <div className="flex min-h-0 flex-col gap-2">
+          <div className="relative mx-auto aspect-square w-full max-w-[min(100%,62svh)] overflow-hidden rounded-xl border bg-[#10141c] lg:mx-0 lg:aspect-auto lg:h-auto lg:max-w-none lg:min-h-0 lg:flex-1 lg:[container-type:size]">
+            <div className="absolute inset-0 lg:inset-auto lg:top-1/2 lg:left-1/2 lg:h-[min(100cqw,100cqh)] lg:w-[min(100cqw,100cqh)] lg:-translate-x-1/2 lg:-translate-y-1/2">
             <MapErrorBoundary onRestart={() => dispatch({ type: "restart" })}>
               <MapCanvas
                 zone={view.zone}
@@ -161,16 +162,17 @@ export function RotationLab() {
                 onAnimationDone={finishAnimation}
               />
             </MapErrorBoundary>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <OverlayToggles
               overlays={state.overlays}
               onToggle={(key: keyof Overlays) => dispatch({ type: "toggle", key })}
             />
-            <p className="text-xs text-muted-foreground">You are yellow. Other {others} are gray.</p>
+            <p className="text-xs text-muted-foreground sm:text-sm">You are yellow. Other {others} are the white dots.</p>
           </div>
         </div>
-        <div className="grid gap-3">
+        <div className="grid content-start gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           {scenario ? <p className="text-sm text-muted-foreground">{scenario.lesson}</p> : null}
           <StatePanel
             view={view}
