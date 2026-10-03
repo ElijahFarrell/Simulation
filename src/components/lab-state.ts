@@ -1,7 +1,8 @@
 import { DEFAULT_SETTINGS } from "@/engine/constants";
 import { advancePhase, createGame } from "@/engine/game";
 import { resolveDecision } from "@/engine/step";
-import type { Engagement, GameMode, GameState, PullType, Team, Timing, Vec } from "@/engine/types";
+import { stayOnLand } from "@/engine/land";
+import type { Engagement, GameMode, GameState, LandMask, PullType, Team, Timing, Vec } from "@/engine/types";
 
 export type Overlays = {
   density: boolean;
@@ -29,10 +30,12 @@ export type LabState = {
   scenarioId: string | null;
   runId: number;
   pullGuess: PullType | null;
+  land: LandMask | null;
 };
 
 export type LabAction =
-  | { type: "start"; seed: number; scenarioId: string | null }
+  | { type: "start"; seed: number; scenarioId: string | null; land: LandMask | null }
+  | { type: "land"; land: LandMask }
   | { type: "restart" }
   | { type: "menu" }
   | { type: "destination"; destination: Vec }
@@ -63,6 +66,7 @@ export const initialLabState: LabState = {
   scenarioId: null,
   runId: 0,
   pullGuess: null,
+  land: null,
 };
 
 export function labReducer(state: LabState, action: LabAction): LabState {
@@ -75,7 +79,9 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         overlays: { ...state.overlays, [action.key]: !state.overlays[action.key] },
       };
     case "start":
-      return begin(state, action.seed, action.scenarioId);
+      return begin({ ...state, land: action.land }, action.seed, action.scenarioId);
+    case "land":
+      return applyLand(state, action.land);
     case "restart":
       return state.game ? begin(state, state.game.seed, state.scenarioId) : state;
     case "menu":
@@ -107,13 +113,35 @@ function begin(state: LabState, seed: number, scenarioId: string | null): LabSta
     screen: "play",
     scenarioId,
     runId: state.runId + 1,
-    game: createGame(seed, state.settings),
+    game: createGame(seed, state.settings, state.land),
     destination: null,
     timing: "standard",
     engagement: "avoid",
     animating: false,
     animFrom: null,
     pullGuess: null,
+  };
+}
+
+function applyLand(state: LabState, land: LandMask): LabState {
+  const game = state.game;
+  if (!game) return { ...state, land };
+  if (game.landMask || state.animating || game.history.length > 0 || game.status !== "deciding") {
+    return { ...state, land, game: { ...game, landMask: game.landMask ?? land } };
+  }
+  const zone = game.zones[game.phaseIndex];
+  return {
+    ...state,
+    land,
+    destination: state.destination ? stayOnLand(land, state.destination) : null,
+    game: {
+      ...game,
+      landMask: land,
+      teams: game.teams.map((team) => ({
+        ...team,
+        pos: zone ? stayOnLand(land, team.pos, zone.from) : team.pos,
+      })),
+    },
   };
 }
 

@@ -11,6 +11,7 @@ import {
 import { applyChip } from "./damage";
 import { buildFeedback, heldCenter, type FeedbackContext } from "./feedback";
 import { dist, sectorIndex } from "./geometry";
+import { stayOnLand } from "./land";
 import { departDelay, simulatePath, type PathSim } from "./movement";
 import { createRng } from "./rng";
 import { scoreDecision } from "./scoring";
@@ -36,7 +37,7 @@ export function resolveDecision(state: GameState, decision: Decision): GameState
 
   const refreshEvent = grantRefresh(player, decision.timing);
   const sectors = sectorDensity(state.teams, zone.to);
-  const sims = moveTeams(teams, zone, decision, rng);
+  const sims = moveTeams(teams, zone, decision, rng, state.landMask);
   const playerSim = sims.get(player.id);
   const stormDamage = playerSim?.stormDamage ?? 0;
   applyChip(player, stormDamage);
@@ -113,13 +114,13 @@ function moveTeams(
   zone: ZonePhase,
   decision: Decision,
   rng: ReturnType<typeof createRng>,
+  land: GameState["landMask"],
 ): Map<string, PathSim> {
   const sims = new Map<string, PathSim>();
   for (const team of teams) {
     if (team.eliminated) continue;
-    const dest = team.isPlayer
-      ? decision.destination
-      : chooseAiDestination(team, teams, zone.to, rng);
+    const raw = team.isPlayer ? decision.destination : chooseAiDestination(team, teams, zone.to, rng);
+    const dest = team.isPlayer ? stayOnLand(land, raw) : stayOnLand(land, raw, zone.to);
     const timing = team.isPlayer ? decision.timing : aiTiming(team.archetype);
     const sim = simulatePath({
       start: team.pos,

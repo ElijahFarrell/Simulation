@@ -87,6 +87,12 @@ export type PhaseResult = {
 
 export type GameStatus = "deciding" | "resolved" | "dead" | "won";
 
+/** Coarse land/water sample. 1 means land. Rows run from the top of the image. */
+export type LandMask = {
+  grid: number;
+  cells: Uint8Array;
+};
+
 export type GameMode = "trios" | "solos";
 
 export type GameSettings = {
@@ -106,6 +112,7 @@ export type GameState = {
   rngState: number;
   placement: number | null;
   settings: GameSettings;
+  landMask: LandMask | null;
 };
 
 export type PhaseName = "Early" | "Mid" | "Endgame";

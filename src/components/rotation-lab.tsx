@@ -20,10 +20,12 @@ import { describeCall, heldCenter } from "@/engine/feedback";
 import { getPhaseView } from "@/engine/game";
 import { sectorIndex } from "@/engine/geometry";
 import { positioningGrid } from "@/engine/analysis";
+import { stayOnLand } from "@/engine/land";
 import { scenarioById } from "@/engine/scenarios";
-import type { Engagement, Timing } from "@/engine/types";
+import type { Engagement, LandMask, Timing } from "@/engine/types";
 import { COACH_API } from "@/lib/coach/constants";
 import { buildCoachContext } from "@/lib/coach/context";
+import { landMaskFromImage } from "@/lib/island/read-land";
 import type { Place } from "@/lib/island/project";
 import { EMPTY_STATS, mergeStats, readStats, subscribeStats, writeStats } from "@/lib/review";
 
@@ -35,6 +37,7 @@ export function RotationLab() {
   const [dismissedSummary, setDismissedSummary] = useState<string | null>(null);
   const [wholeGame, setWholeGame] = useState(false);
   const [island, setIsland] = useState<IslandView>({ imageUrl: null, places: [] });
+  const [land, setLand] = useState<LandMask | null>(null);
   const coachChat = useMemo(
     () =>
       new Chat<UIMessage>({
@@ -73,6 +76,23 @@ export function RotationLab() {
   }, []);
 
   useEffect(() => {
+    if (!island.imageUrl) return;
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled) setLand(landMaskFromImage(image));
+    };
+    image.src = island.imageUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [island.imageUrl]);
+
+  useEffect(() => {
+    if (land) dispatch({ type: "land", land });
+  }, [land]);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (isTyping(event.target) || state.screen !== "play" || !state.game) return;
       const timing = timingKey(event.key);
@@ -104,7 +124,7 @@ export function RotationLab() {
         settings={state.settings}
         stats={stats}
         onSettings={(settings) => dispatch({ type: "settings", settings })}
-        onStart={(seed, scenarioId) => dispatch({ type: "start", seed, scenarioId })}
+        onStart={(seed, scenarioId) => dispatch({ type: "start", seed, scenarioId, land })}
       />
     );
   }
@@ -158,7 +178,12 @@ export function RotationLab() {
                 animateFrom={state.animating ? state.animFrom : null}
                 playerTiming={state.timing}
                 imageUrl={island.imageUrl}
-                onPick={(destination) => dispatch({ type: "destination", destination })}
+                onPick={(destination) =>
+                  dispatch({
+                    type: "destination",
+                    destination: stayOnLand(game.landMask, destination),
+                  })
+                }
                 onAnimationDone={finishAnimation}
               />
             </MapErrorBoundary>
