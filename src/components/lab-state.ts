@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from "@/engine/constants";
 import { advancePhase, createGame } from "@/engine/game";
 import { resolveDecision } from "@/engine/step";
-import type { Engagement, GameState, PullType, Team, Timing, Vec } from "@/engine/types";
+import type { Engagement, GameMode, GameState, PullType, Team, Timing, Vec } from "@/engine/types";
 
 export type Overlays = {
   density: boolean;
@@ -10,6 +10,7 @@ export type Overlays = {
 };
 
 export type LabSettings = {
+  mode: GameMode;
   teamCount: number;
   fighterWeight: number;
   hints: boolean;
@@ -53,7 +54,12 @@ export const initialLabState: LabState = {
   overlays: { density: true, pull: true, heatmap: false },
   animating: false,
   animFrom: null,
-  settings: { ...DEFAULT_SETTINGS, hints: true },
+  settings: {
+    mode: DEFAULT_SETTINGS.mode,
+    teamCount: DEFAULT_SETTINGS.teamCount,
+    fighterWeight: DEFAULT_SETTINGS.fighterWeight,
+    hints: true,
+  },
   scenarioId: null,
   runId: 0,
   pullGuess: null,

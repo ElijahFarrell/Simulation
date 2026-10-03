@@ -6,38 +6,44 @@ import { SendIcon, SquareIcon } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CoachMessage } from "@/components/coach-message";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { MAX_QUESTION_CHARS, PASSCODE_HEADER } from "@/lib/coach/constants";
 import { coachStarters } from "@/lib/coach/context";
 import { readPasscode, subscribePasscode, writePasscode } from "@/lib/coach/passcode-store";
 import type { CoachContext } from "@/lib/coach/schema";
 
-export function CoachDialog({
+export function CoachPanel({
   chat,
   context,
-  open,
-  onOpenChange,
+  wholeGame,
+  onWholeGame,
 }: {
   chat: Chat<UIMessage>;
   context: CoachContext;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  wholeGame: boolean;
+  onWholeGame: (wholeGame: boolean) => void;
 }) {
+  const watching =
+    context.focusZone === null ? "Watching the whole game" : `Watching zone ${context.focusZone}`;
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Coach</DialogTitle>
-          <DialogDescription>
-            {context.focusZone === null
-              ? "Find the habit that cost you the most."
-              : `What cost you on zone ${context.focusZone}, and what to do next.`}
-          </DialogDescription>
-        </DialogHeader>
-        <CoachChat chat={chat} context={context} />
-      </DialogContent>
-    </Dialog>
+    <section
+      id="coach"
+      aria-label="Coach"
+      className="sticky top-3 flex h-[min(40rem,calc(100dvh-5rem))] flex-col gap-3 rounded-xl border bg-card p-4"
+    >
+      <div className="grid gap-2">
+        <h2 className="text-base font-semibold">{watching}</h2>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant={wholeGame ? "outline" : "secondary"} onClick={() => onWholeGame(false)}>
+            This zone
+          </Button>
+          <Button type="button" size="sm" variant={wholeGame ? "secondary" : "outline"} onClick={() => onWholeGame(true)}>
+            Whole game
+          </Button>
+        </div>
+      </div>
+      <CoachChat chat={chat} context={context} />
+    </section>
   );
 }
 

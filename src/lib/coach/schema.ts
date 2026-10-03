@@ -16,6 +16,7 @@ const zoneCallSchema = z.object({
   surgeActive: z.boolean(),
   stormDps: z.number(),
   call: z.string().max(200),
+  place: z.string().max(80).nullable(),
   timing: z.enum(["early", "standard", "late"]),
   engagement: z.enum(["avoid", "tag", "fight"]),
   side: z
@@ -35,6 +36,7 @@ const zoneCallSchema = z.object({
 
 export const coachContextSchema = z.object({
   seed: z.number().int(),
+  mode: z.enum(["solos", "trios"]),
   status: z.enum(["deciding", "resolved", "dead", "won"]),
   placement: z.number().int().nullable(),
   lobbySize: z.number().int(),

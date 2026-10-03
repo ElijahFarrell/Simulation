@@ -9,6 +9,12 @@ const SECTOR_FILL = {
   normal: "rgba(255, 255, 255, 0.035)",
 } as const;
 
+const SECTOR_FILL_ISLAND = {
+  dead: "rgba(52, 211, 153, 0.16)",
+  stacked: "rgba(248, 113, 113, 0.2)",
+  normal: "rgba(255, 255, 255, 0.02)",
+} as const;
+
 export function worldToScreen(point: Vec, size: number): Vec {
   return {
     x: (point.x / MAP_SIZE) * size,
@@ -18,17 +24,22 @@ export function worldToScreen(point: Vec, size: number): Vec {
 
 export function drawMap(ctx: CanvasRenderingContext2D, size: number, scene: MapScene): void {
   ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = "#10141c";
-  ctx.fillRect(0, 0, size, size);
-  drawGrid(ctx, size);
+  if (scene.island) {
+    ctx.drawImage(scene.island, 0, 0, size, size);
+  } else {
+    ctx.fillStyle = "#10141c";
+    ctx.fillRect(0, 0, size, size);
+    drawGrid(ctx, size);
+  }
   if (scene.heatmap) drawHeat(ctx, size, scene.zone.to, scene.heatmap);
-  if (scene.showDensity) drawSectors(ctx, size, scene.zone.to, scene.sectors);
-  drawRing(ctx, size, scene.zone.from, "rgba(255,255,255,0.55)", 1.5, false);
+  if (scene.showDensity) drawSectors(ctx, size, scene.zone.to, scene.sectors, Boolean(scene.island));
+  drawRing(ctx, size, scene.storm ?? scene.zone.from, "rgba(255,255,255,0.85)", 2, false);
   drawRing(ctx, size, scene.zone.to, "#8eb7ff", 2, true);
   if (scene.showPull && scene.pull) drawRing(ctx, size, scene.pull, "#9bd7ff", 1.5, false, true);
   drawCompass(ctx, size, scene.zone.to);
   drawTeams(ctx, size, scene.teams);
   if (scene.destination) drawPin(ctx, size, scene.player, scene.destination);
+  if (scene.clock) drawClock(ctx, size, scene.clock, scene.zone.waitSec);
 }
 
 export type MapScene = {
@@ -41,6 +52,9 @@ export type MapScene = {
   heatmap: HeatCell[] | null;
   showDensity: boolean;
   showPull: boolean;
+  island: CanvasImageSource | null;
+  storm: Circle | null;
+  clock: { timeSec: number } | null;
 };
 
 function drawGrid(ctx: CanvasRenderingContext2D, size: number): void {
@@ -84,11 +98,31 @@ function drawRing(
   ctx.restore();
 }
 
+function drawClock(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  clock: { timeSec: number },
+  waitSec: number,
+): void {
+  const closing = clock.timeSec >= waitSec;
+  const label = closing ? "Storm is closing" : "Waiting to leave";
+  ctx.save();
+  ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
+  const width = ctx.measureText(label).width + 16;
+  ctx.fillStyle = "rgba(16, 20, 28, 0.82)";
+  ctx.fillRect(12, size - 36, width, 24);
+  ctx.fillStyle = closing ? "#fecaca" : "#e2e8f0";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 20, size - 24);
+  ctx.restore();
+}
+
 function drawSectors(
   ctx: CanvasRenderingContext2D,
   size: number,
   circle: Circle,
   sectors: readonly SectorInfo[],
+  onIsland: boolean,
 ): void {
   const center = worldToScreen(circle.center, size);
   const scale = size / MAP_SIZE;
@@ -101,7 +135,7 @@ function drawSectors(
     ctx.arc(center.x, center.y, outer, start, start + slice);
     ctx.arc(center.x, center.y, inner, start + slice, start, true);
     ctx.closePath();
-    ctx.fillStyle = SECTOR_FILL[sector.label];
+    ctx.fillStyle = onIsland ? SECTOR_FILL_ISLAND[sector.label] : SECTOR_FILL[sector.label];
     ctx.fill();
   }
 }

@@ -6,10 +6,11 @@ import type { GameSettings, PullType } from "./types";
  */
 export const MAP_SIZE = 1000;
 export const INITIAL_RADIUS = 500;
-/** A full trios lobby: 99 players. */
-export const MAX_TEAMS = 33;
-export const MIN_TEAMS = 16;
-export const TEAM_COUNT = MAX_TEAMS;
+/** Trios is 33 teams of 3. Solos is 100 players of 1. */
+export const GAME_MODES = {
+  trios: { squadSize: 3, teamCount: 33, minTeams: 16, maxTeams: 33 },
+  solos: { squadSize: 1, teamCount: 100, minTeams: 40, maxTeams: 100 },
+} as const;
 export const ROTATE_SPEED = 5.5;
 export const SIM_TICK_SEC = 1;
 export const SECTOR_COUNT = 8;
@@ -35,7 +36,9 @@ export const STACKED_MIN = 3;
 export const TAG_DAMAGE = 220;
 
 export const DEFAULT_SETTINGS: GameSettings = {
-  teamCount: TEAM_COUNT,
+  mode: "trios",
+  squadSize: GAME_MODES.trios.squadSize,
+  teamCount: GAME_MODES.trios.teamCount,
   fighterWeight: 0.2,
 };
 

@@ -29,12 +29,12 @@ export function StatePanel({
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Teams alive</span>
+          <span className="text-muted-foreground">{player.squadSize === 1 ? "Players alive" : "Teams alive"}</span>
           <span className="tabular-nums">{teamsAlive}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Your trio</span>
-          <AlivePips alive={player.alive} />
+          <span className="text-muted-foreground">{player.squadSize === 1 ? "You" : "Your trio"}</span>
+          <AlivePips alive={player.alive} squadSize={player.squadSize} />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Mats</span>
@@ -65,10 +65,10 @@ export function StatePanel({
   );
 }
 
-function AlivePips({ alive }: { alive: number }) {
+function AlivePips({ alive, squadSize }: { alive: number; squadSize: number }) {
   return (
-    <span className="flex gap-1" aria-label={`${alive} of 3 alive`}>
-      {[0, 1, 2].map((index) => (
+    <span className="flex gap-1" aria-label={`${alive} of ${squadSize} alive`}>
+      {Array.from({ length: squadSize }, (_, index) => (
         <span
           key={index}
           className={index < alive ? "size-2.5 rounded-full bg-emerald-400" : "size-2.5 rounded-full bg-muted"}

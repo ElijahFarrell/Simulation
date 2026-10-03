@@ -8,7 +8,7 @@ export function syncAlive(team: Team): void {
     team.eliminated = true;
     return;
   }
-  team.alive = Math.min(3, Math.ceil(team.hp / HP_PER_ALIVE));
+  team.alive = Math.min(team.squadSize, Math.ceil(team.hp / HP_PER_ALIVE));
   team.eliminated = false;
 }
 
