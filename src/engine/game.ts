@@ -2,19 +2,20 @@ import { sectorDensity, pullRegion } from "./analysis";
 import { normalizeSettings, createLobby } from "./lobby";
 import { createRng } from "./rng";
 import { placementFor } from "./step";
-import type { GameSettings, GameState, LandMask, PhaseView, Team } from "./types";
+import type { GameSettings, GameState, LandMask, PhaseView, Team, Vec } from "./types";
 import { generateZones, phaseLabel, zoneAt } from "./zones";
 
 export function createGame(
   seed: number,
   settings?: Partial<GameSettings>,
   land?: LandMask | null,
+  places?: readonly Vec[],
 ): GameState {
   const resolved = normalizeSettings(settings);
   const rng = createRng(seed);
   const zones = generateZones(rng);
   const first = zoneAt(zones, 0);
-  const teams = createLobby(rng, first, resolved, land);
+  const teams = createLobby(rng, first, resolved, land, places);
   return {
     seed: seed >>> 0,
     phaseIndex: 0,

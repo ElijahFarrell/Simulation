@@ -22,6 +22,8 @@ type MapCanvasProps = {
   animateFrom: Team[] | null;
   playerTiming: Timing;
   imageUrl: string | null;
+  route: Vec[] | null;
+  hidePlayer: boolean;
   onPick: (point: Vec) => void;
   onAnimationDone: () => void;
 };
@@ -39,6 +41,8 @@ export function MapCanvas({
   animateFrom,
   playerTiming,
   imageUrl,
+  route,
+  hidePlayer,
   onPick,
   onAnimationDone,
 }: MapCanvasProps) {
@@ -57,6 +61,8 @@ export function MapCanvas({
     showPull,
     animateFrom,
     playerTiming,
+    route,
+    hidePlayer,
   });
 
   useEffect(() => {
@@ -75,13 +81,17 @@ export function MapCanvas({
       showPull,
       animateFrom,
       playerTiming,
+      route,
+      hidePlayer,
     };
   }, [
     animateFrom,
     destination,
     heatmap,
+    hidePlayer,
     playerTiming,
     pull,
+    route,
     sectors,
     showDensity,
     showPull,
@@ -151,6 +161,8 @@ export function MapCanvas({
         island: islandRef.current,
         storm: playing ? circleAt(scene.zone, timeSec) : null,
         clock: playing ? { timeSec } : null,
+        route: scene.route,
+        hidePlayer: scene.hidePlayer,
       });
       if (playing) {
         frame = requestAnimationFrame(paint);
@@ -179,16 +191,18 @@ export function MapCanvas({
 
   useEffect(() => {
     kickRef.current();
-  }, [destination, heatmap, playerTiming, pull, sectors, showDensity, showPull, teams, zone]);
+  }, [destination, heatmap, hidePlayer, playerTiming, pull, route, sectors, showDensity, showPull, teams, zone]);
 
   return (
     <canvas
       ref={canvasRef}
       className="h-full w-full touch-none"
       aria-label={
-        destination
-          ? `Zone ${zone.index} map. Rotate pin is set.`
-          : `Zone ${zone.index} map. Click to choose where you rotate.`
+        route
+          ? `Zone ${zone.index} map. Tap to add a drop or loot stop.`
+          : destination
+            ? `Zone ${zone.index} map. Rotate pin is set.`
+            : `Zone ${zone.index} map. Click to choose where you rotate.`
       }
       onPointerDown={(event) => {
         if (disabled) return;

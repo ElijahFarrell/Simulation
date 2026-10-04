@@ -95,11 +95,15 @@ export type LandMask = {
 
 export type GameMode = "trios" | "solos";
 
+/** Opens scatter teams. Stacked piles most of them onto a few drops. */
+export type DropStyle = "opens" | "stacked";
+
 export type GameSettings = {
   mode: GameMode;
   squadSize: number;
   teamCount: number;
   fighterWeight: number;
+  dropStyle: DropStyle;
 };
 
 export type GameState = {

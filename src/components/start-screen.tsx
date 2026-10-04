@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import type { LabSettings } from "@/components/lab-state";
+import type { DropStyle } from "@/engine/types";
 import { GAME_MODES, ZONE_TABLE } from "@/engine/constants";
 import { SCENARIOS } from "@/engine/scenarios";
 import type { SavedStats } from "@/lib/review";
@@ -79,6 +80,26 @@ export function StartScreen({
                 Solos
               </Button>
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Lobby</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={settings.dropStyle === "opens" ? "default" : "outline"}
+                onClick={() => onSettings({ ...settings, dropStyle: "opens" })}
+              >
+                Opens
+              </Button>
+              <Button
+                type="button"
+                variant={settings.dropStyle === "stacked" ? "default" : "outline"}
+                onClick={() => onSettings({ ...settings, dropStyle: "stacked" })}
+              >
+                Stacked
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">{lobbyCopy(settings.dropStyle)}</p>
           </div>
           <div className="grid gap-2">
             <div className="flex items-center justify-between text-sm">
@@ -157,6 +178,11 @@ export function StartScreen({
       ) : null}
     </div>
   );
+}
+
+function lobbyCopy(style: DropStyle): string {
+  if (style === "stacked") return "Most teams pile onto a few drops. Dead sides are rare.";
+  return "Teams spread across the island, so quiet sides show up.";
 }
 
 function parseSeed(seedText: string): number {

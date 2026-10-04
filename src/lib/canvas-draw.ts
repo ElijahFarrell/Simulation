@@ -37,8 +37,9 @@ export function drawMap(ctx: CanvasRenderingContext2D, size: number, scene: MapS
   drawRing(ctx, size, scene.zone.to, "#8eb7ff", 2, true);
   if (scene.showPull && scene.pull) drawRing(ctx, size, scene.pull, "#9bd7ff", 1.5, false, true);
   drawCompass(ctx, size, scene.zone.to);
-  drawTeams(ctx, size, scene.teams);
-  if (scene.destination) drawPin(ctx, size, scene.player, scene.destination);
+  drawTeams(ctx, size, scene.teams, scene.hidePlayer);
+  if (scene.route && scene.route.length > 0) drawRoute(ctx, size, scene.route);
+  if (scene.destination && !scene.hidePlayer) drawPin(ctx, size, scene.player, scene.destination);
   if (scene.clock) drawClock(ctx, size, scene.clock, scene.zone.waitSec);
 }
 
@@ -55,6 +56,8 @@ export type MapScene = {
   island: CanvasImageSource | null;
   storm: Circle | null;
   clock: { timeSec: number } | null;
+  route: Vec[] | null;
+  hidePlayer: boolean;
 };
 
 function drawGrid(ctx: CanvasRenderingContext2D, size: number): void {
@@ -183,7 +186,37 @@ function drawCompass(ctx: CanvasRenderingContext2D, size: number, circle: Circle
   ctx.restore();
 }
 
-function drawTeams(ctx: CanvasRenderingContext2D, size: number, teams: readonly Team[]): void {
+function drawRoute(ctx: CanvasRenderingContext2D, size: number, points: readonly Vec[]): void {
+  const scale = size / 640;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 225, 74, 0.95)";
+  ctx.lineWidth = 2.5 * scale;
+  ctx.setLineDash([6 * scale, 5 * scale]);
+  ctx.beginPath();
+  points.forEach((point, index) => {
+    const screen = worldToScreen(point, size);
+    if (index === 0) ctx.moveTo(screen.x, screen.y);
+    else ctx.lineTo(screen.x, screen.y);
+  });
+  ctx.stroke();
+  ctx.restore();
+  points.forEach((point, index) => {
+    const screen = worldToScreen(point, size);
+    const radius = index === 0 ? Math.max(8, size * 0.02) : Math.max(5, size * 0.012);
+    drawDot(ctx, screen.x, screen.y, radius, {
+      fill: index === 0 ? "#ffe14a" : "#fff4b0",
+      halo: "rgba(250, 204, 21, 0.7)",
+      alpha: 1,
+    });
+  });
+}
+
+function drawTeams(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  teams: readonly Team[],
+  hidePlayer: boolean,
+): void {
   const otherRadius = Math.max(5, size * 0.012);
   const youRadius = Math.max(8, size * 0.02);
   for (const team of teams) {
@@ -195,7 +228,7 @@ function drawTeams(ctx: CanvasRenderingContext2D, size: number, teams: readonly 
       alpha: team.eliminated ? 0.35 : 1,
     });
   }
-  const player = teams.find((team) => team.isPlayer);
+  const player = hidePlayer ? undefined : teams.find((team) => team.isPlayer);
   if (!player) return;
   const screen = worldToScreen(player.pos, size);
   drawDot(ctx, screen.x, screen.y, youRadius, {

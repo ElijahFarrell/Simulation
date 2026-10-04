@@ -5,6 +5,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { CoachPanel } from "@/components/coach-dialog";
 import { DecisionPanel } from "@/components/decision-panel";
+import { DropPlan } from "@/components/drop-plan";
 import { FeedbackCard } from "@/components/feedback-card";
 import { initialLabState, labReducer, type Overlays } from "@/components/lab-state";
 import { MapCanvas } from "@/components/map-canvas";
@@ -95,6 +96,11 @@ export function RotationLab() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (isTyping(event.target) || state.screen !== "play" || !state.game) return;
+      if (state.planning) {
+        if (event.key === "Enter") dispatch({ type: "drop-lock" });
+        if (event.key === "Backspace") dispatch({ type: "drop-undo" });
+        return;
+      }
       const timing = timingKey(event.key);
       if (timing) {
         dispatch({ type: "timing", timing });
@@ -110,7 +116,7 @@ export function RotationLab() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [state.game, state.screen]);
+  }, [state.game, state.planning, state.screen]);
 
   const view = useMemo(() => (game ? getPhaseView(game) : null), [game]);
   const heatmap = useMemo(() => {
@@ -124,7 +130,9 @@ export function RotationLab() {
         settings={state.settings}
         stats={stats}
         onSettings={(settings) => dispatch({ type: "settings", settings })}
-        onStart={(seed, scenarioId) => dispatch({ type: "start", seed, scenarioId, land })}
+        onStart={(seed, scenarioId) =>
+          dispatch({ type: "start", seed, scenarioId, land, places: island.places })
+        }
       />
     );
   }
@@ -178,12 +186,21 @@ export function RotationLab() {
                 animateFrom={state.animating ? state.animFrom : null}
                 playerTiming={state.timing}
                 imageUrl={island.imageUrl}
-                onPick={(destination) =>
+                route={state.planning ? state.route : null}
+                hidePlayer={state.planning}
+                onPick={(point) => {
+                  if (state.planning) {
+                    dispatch({
+                      type: "drop-add",
+                      point: stayOnLand(game.landMask, point, view.zone.from),
+                    });
+                    return;
+                  }
                   dispatch({
                     type: "destination",
-                    destination: stayOnLand(game.landMask, destination),
-                  })
-                }
+                    destination: stayOnLand(game.landMask, point),
+                  });
+                }}
                 onAnimationDone={finishAnimation}
               />
             </MapErrorBoundary>
@@ -194,7 +211,11 @@ export function RotationLab() {
               overlays={state.overlays}
               onToggle={(key: keyof Overlays) => dispatch({ type: "toggle", key })}
             />
-            <p className="text-xs text-muted-foreground sm:text-sm">You are yellow. Other {others} are the white dots.</p>
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              {state.planning
+                ? `Yellow marks are your drop and loot route. Other ${others} are the white dots.`
+                : `You are yellow. Other ${others} are the white dots.`}
+            </p>
           </div>
         </div>
         <div className="grid content-start gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
@@ -204,7 +225,17 @@ export function RotationLab() {
             teamsAlive={view.teamsAlive}
             revealPull={!state.settings.hints || state.pullGuess !== null}
           />
-          {showFeedback && last ? (
+          {state.planning ? (
+            <DropPlan
+              route={state.route}
+              places={island.places}
+              waitSec={view.zone.waitSec}
+              onUndo={() => dispatch({ type: "drop-undo" })}
+              onClear={() => dispatch({ type: "drop-clear" })}
+              onSkip={() => dispatch({ type: "drop-skip" })}
+              onLock={() => dispatch({ type: "drop-lock" })}
+            />
+          ) : showFeedback && last ? (
             <FeedbackCard
               result={last}
               canAdvance={game.status === "resolved"}
@@ -245,6 +276,7 @@ export function RotationLab() {
                     seed: Math.floor(Math.random() * 1_000_000_000),
                     scenarioId: null,
                     land,
+                    places: island.places,
                   })
                 }
               >
@@ -277,6 +309,7 @@ export function RotationLab() {
             seed: Math.floor(Math.random() * 1_000_000_000),
             scenarioId: null,
             land,
+            places: island.places,
           });
         }}
         onMenu={() => {

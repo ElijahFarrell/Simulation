@@ -3,8 +3,13 @@ import { chooseAiDestination } from "../ai-behavior";
 import { dist } from "../geometry";
 import { createLobby } from "../lobby";
 import { createRng } from "../rng";
-import type { Team, ZonePhase } from "../types";
+import type { LandMask, Team, ZonePhase } from "../types";
 import { generateZones } from "../zones";
+
+function fullLand(): LandMask {
+  const grid = 32;
+  return { grid, cells: new Uint8Array(grid * grid).fill(1) };
+}
 
 function zone(): ZonePhase {
   const generated = generateZones(createRng(3));
@@ -37,6 +42,27 @@ describe("lobby", () => {
     expect(teams[0]?.id).toBe("you");
     expect(teams[0]?.squadSize).toBe(3);
     expect(teams[0]?.alive).toBe(3);
+  });
+
+  it("piles a stacked lobby onto the named drops", () => {
+    const mask = fullLand();
+    const places = [
+      { x: 200, y: 700 },
+      { x: 800, y: 700 },
+      { x: 200, y: 300 },
+      { x: 800, y: 300 },
+      { x: 500, y: 500 },
+    ];
+    const teams = createLobby(
+      createRng(4),
+      zone(),
+      { teamCount: 33, fighterWeight: 0.2, dropStyle: "stacked" },
+      mask,
+      places,
+    );
+    const others = teams.filter((entry) => !entry.isPlayer);
+    const near = others.filter((entry) => places.some((place) => dist(entry.pos, place) <= 40));
+    expect(near.length).toBeGreaterThan(others.length * 0.6);
   });
 
   it("builds a solos lobby as 100 players of 1", () => {

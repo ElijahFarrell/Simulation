@@ -12,6 +12,13 @@ export const GAME_MODES = {
   solos: { squadSize: 1, teamCount: 100, minTeams: 40, maxTeams: 100 },
 } as const;
 export const ROTATE_SPEED = 5.5;
+/** Seconds spent looting each stop after the drop. Travel uses ROTATE_SPEED. */
+export const LOOT_STOP_SEC = 8;
+export const MAX_ROUTE_STOPS = 8;
+/** Stacked lobbies share a few drops. The rest still scatter. */
+export const HOT_DROPS = 5;
+export const STACKED_SHARE = 0.8;
+export const STACKED_JITTER = 36;
 export const SIM_TICK_SEC = 1;
 export const SECTOR_COUNT = 8;
 export const CONTACT_RADIUS = 42;
@@ -40,6 +47,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   squadSize: GAME_MODES.trios.squadSize,
   teamCount: GAME_MODES.trios.teamCount,
   fighterWeight: 0.2,
+  dropStyle: "opens",
 };
 
 export const SCORE_WEIGHTS = {

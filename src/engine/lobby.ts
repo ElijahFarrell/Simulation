@@ -1,5 +1,15 @@
-import { DEFAULT_SETTINGS, GAME_MODES, HP_PER_ALIVE, MAP_SIZE, START_HEALS, START_MATS } from "./constants";
-import { clampToMap, sampleDisc } from "./geometry";
+import {
+  DEFAULT_SETTINGS,
+  GAME_MODES,
+  HOT_DROPS,
+  HP_PER_ALIVE,
+  MAP_SIZE,
+  STACKED_JITTER,
+  STACKED_SHARE,
+  START_HEALS,
+  START_MATS,
+} from "./constants";
+import { clampToMap, pointInCircle, sampleDisc } from "./geometry";
 import { isLandPoint, stayOnLand } from "./land";
 import type { Rng } from "./rng";
 import type { Archetype, Circle, GameSettings, LandMask, Team, Vec, ZonePhase } from "./types";
@@ -16,6 +26,7 @@ export function normalizeSettings(settings?: Partial<GameSettings>): GameSetting
     squadSize: rules.squadSize,
     teamCount: Math.min(rules.maxTeams, Math.max(rules.minTeams, teamCount)),
     fighterWeight: Math.min(0.6, Math.max(0, fighterWeight)),
+    dropStyle: settings?.dropStyle === "stacked" ? "stacked" : "opens",
   };
 }
 
@@ -24,20 +35,19 @@ export function createLobby(
   firstZone: ZonePhase,
   settings?: Partial<GameSettings>,
   land?: LandMask | null,
+  places?: readonly Vec[],
 ): Team[] {
   const resolved = normalizeSettings(settings);
   const anchors = Array.from({ length: 8 }, () =>
     sampleDisc(rng, firstZone.to.center, firstZone.to.radius * 0.8),
   );
+  const hot = resolved.dropStyle === "stacked" ? hotDrops(rng, firstZone, land, places ?? []) : [];
 
   const teams = Array.from({ length: resolved.teamCount }, (_, index) => {
     const anchor = rng.pick(anchors);
     const pos = land
-      ? dropOnLand(rng, firstZone.from, land)
-      : clampToMap({
-          x: anchor.x + rng.range(-70, 70),
-          y: anchor.y + rng.range(-70, 70),
-        });
+      ? placeOnLand(rng, firstZone.from, land, hot)
+      : placeInCircle(rng, anchor, hot);
     return makeTeam(index, pos, rollArchetype(rng, resolved.fighterWeight), resolved.squadSize);
   });
 
@@ -53,6 +63,58 @@ export function createLobby(
     };
   }
   return teams;
+}
+
+function hotDrops(
+  rng: Rng,
+  zone: ZonePhase,
+  land: LandMask | null | undefined,
+  places: readonly Vec[],
+): Vec[] {
+  const picked: Vec[] = [];
+  const bag = places.filter(
+    (place) => (!land || isLandPoint(land, place)) && pointInCircle(place, zone.from),
+  );
+  while (picked.length < HOT_DROPS && bag.length > 0) {
+    const index = Math.floor(rng.next() * bag.length);
+    const spot = bag.splice(index, 1)[0];
+    if (spot) picked.push(spot);
+  }
+  while (picked.length < HOT_DROPS) {
+    picked.push(
+      land
+        ? dropOnLand(rng, zone.from, land)
+        : sampleDisc(rng, zone.to.center, zone.to.radius * 0.75),
+    );
+  }
+  return picked;
+}
+
+function placeOnLand(rng: Rng, circle: Circle, land: LandMask, hot: readonly Vec[]): Vec {
+  if (hot.length > 0 && rng.chance(STACKED_SHARE)) {
+    return jitterAround(rng, rng.pick(hot), land, circle);
+  }
+  return dropOnLand(rng, circle, land);
+}
+
+function placeInCircle(rng: Rng, anchor: Vec, hot: readonly Vec[]): Vec {
+  if (hot.length > 0 && rng.chance(STACKED_SHARE)) {
+    return jitterAround(rng, rng.pick(hot));
+  }
+  return clampToMap({
+    x: anchor.x + rng.range(-70, 70),
+    y: anchor.y + rng.range(-70, 70),
+  });
+}
+
+function jitterAround(rng: Rng, spot: Vec, land?: LandMask, circle?: Circle): Vec {
+  const angle = rng.range(0, Math.PI * 2);
+  const reach = rng.range(0, STACKED_JITTER);
+  const point = clampToMap({
+    x: spot.x + Math.cos(angle) * reach,
+    y: spot.y + Math.sin(angle) * reach,
+  });
+  return land && circle ? stayOnLand(land, point, circle) : point;
 }
 
 function dropOnLand(rng: Rng, circle: Circle, land: LandMask): Vec {

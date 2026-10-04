@@ -41,7 +41,7 @@ describe("review", () => {
       status: "won",
       rngState: 1,
       placement: 1,
-      settings: { mode: "trios", squadSize: 3, teamCount: 30, fighterWeight: 0.2 },
+      settings: { mode: "trios", squadSize: 3, teamCount: 30, fighterWeight: 0.2, dropStyle: "opens" },
       landMask: null,
     });
     expect(next.wins).toBe(1);
