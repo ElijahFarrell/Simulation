@@ -244,6 +244,7 @@ export function RotationLab() {
                     type: "start",
                     seed: Math.floor(Math.random() * 1_000_000_000),
                     scenarioId: null,
+                    land,
                   })
                 }
               >
@@ -271,7 +272,12 @@ export function RotationLab() {
         }}
         onNewGame={() => {
           if (summaryKey) setDismissedSummary(summaryKey);
-          dispatch({ type: "start", seed: Math.floor(Math.random() * 1_000_000_000), scenarioId: null });
+          dispatch({
+            type: "start",
+            seed: Math.floor(Math.random() * 1_000_000_000),
+            scenarioId: null,
+            land,
+          });
         }}
         onMenu={() => {
           if (summaryKey) setDismissedSummary(summaryKey);
