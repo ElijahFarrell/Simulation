@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.130",
+    "@clerk/nextjs": "^7.9.11",
     "ai": "^7.0.127",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
+    "convex": "^1.46.0",
     "lucide-react": "^1.49.0",
     "next": "16.3.8",
     "radix-ui": "^1.6.7",

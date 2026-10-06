@@ -18,6 +18,20 @@ npm test
 npm run typecheck
 ```
 
+## My stats (accounts)
+
+`/stats` is a separate signed-in area for real-match stats from uploaded replays. It uses Clerk for sign-in and Convex for data and replay file storage. Rotation Lab at `/` does not need either.
+
+Local setup:
+
+```bash
+npx convex dev            # first run: creates a Convex project and writes NEXT_PUBLIC_CONVEX_URL to .env.local
+npx clerk@latest init     # or copy keys from the Clerk dashboard into .env.local
+npx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-app>.clerk.accounts.dev
+```
+
+In Clerk, add a JWT template named `convex` with `"aud": "convex"` (or turn on the Convex integration). Sign in with Epic is a custom OIDC provider in Clerk using `https://api.epicgames.dev/epic/oauth/v2/.well-known/openid-configuration`.
+
 ## How a rep works
 
 - The white ring is the storm you are in. The blue ring is the zone you are rotating into.
