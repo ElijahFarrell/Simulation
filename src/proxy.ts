@@ -1,8 +1,19 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
+import { clerkEnabled } from "@/lib/clerk-enabled";
 
-export default clerkMiddleware();
+const clerk = clerkMiddleware();
 
-// Only the account area uses Clerk, so Rotation Lab keeps working without auth keys.
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (!clerkEnabled) return;
+  return clerk(request, event);
+}
+
 export const config = {
-  matcher: ["/stats/:path*", "/sign-in/:path*", "/sign-up/:path*"],
+  matcher: [
+    // Skip Next.js internals and static files unless they appear in search params.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+    "/__clerk/:path*",
+  ],
 };

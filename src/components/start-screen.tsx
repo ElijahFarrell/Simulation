@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { AccountControls } from "@/components/account-controls";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,9 +34,7 @@ export function StartScreen({
       <header className="grid gap-2">
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm font-medium text-muted-foreground">Solos and trios practice</p>
-          <Link href="/stats" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-            My stats →
-          </Link>
+          <AccountControls />
         </div>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Rotation Lab</h1>
         <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
