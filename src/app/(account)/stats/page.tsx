@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { StatsHome } from "@/components/stats/stats-home";
 
 export const metadata: Metadata = {
-  title: "My stats · Rotation Lab",
+  title: "Hub · Rotation Lab",
 };
 
 export default async function StatsPage() {

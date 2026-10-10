@@ -18,9 +18,11 @@ npm test
 npm run typecheck
 ```
 
-## My stats (accounts)
+## Hub (accounts)
 
-`/stats` is a separate signed-in area for real-match stats from uploaded replays. It uses Clerk for sign-in and Convex for data and replay file storage. Rotation Lab at `/` does not need either.
+`/stats` is the signed-in hub. It looks up an Epic display name, shows a tournament session (live qual line, series estimate, pace, damage ratio), and stores `.replay` uploads. Clerk handles sign-in. Convex stores the account link and the replay files. Rotation practice at `/` does not need either.
+
+Tournament rows come from the [Osirion public API](https://fnapi.osirion.gg/). That feed includes placement, elims, and damage for scored games. This app does not parse `.replay` files, and it is not affiliated with Epic or Osirion. Epic sign-in still needs an approved Epic developer app; until then, linking is a display-name lookup.
 
 Local setup:
 

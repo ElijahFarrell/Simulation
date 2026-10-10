@@ -1,3 +1,4 @@
+import { v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 
 export async function currentUser(ctx: QueryCtx) {
@@ -27,5 +28,30 @@ export const store = mutation({
       return existing._id;
     }
     return await ctx.db.insert("users", { tokenIdentifier: identity.tokenIdentifier, name });
+  },
+});
+
+const EPIC_ID = /^[0-9a-f]{32}$/i;
+
+/** Saves the Epic account chosen from a display-name lookup. Public leaderboard data only. */
+export const linkEpic = mutation({
+  args: {
+    epicAccountId: v.string(),
+    epicDisplayName: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await currentUser(ctx);
+    if (!user) throw new Error("Not signed in");
+    if (!EPIC_ID.test(args.epicAccountId)) throw new Error("Epic account id looks wrong");
+    const epicDisplayName = args.epicDisplayName.trim();
+    if (epicDisplayName.length < 1 || epicDisplayName.length > 32) {
+      throw new Error("Epic name must be 1–32 characters");
+    }
+    await ctx.db.patch(user._id, {
+      epicAccountId: args.epicAccountId.toLowerCase(),
+      epicDisplayName,
+    });
+    return null;
   },
 });

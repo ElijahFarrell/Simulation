@@ -21,7 +21,7 @@ export function AccountControls() {
       </Show>
       <Show when="signed-in">
         <Link href="/stats" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          My stats
+          Hub
         </Link>
         <UserButton />
       </Show>
