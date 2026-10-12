@@ -4,25 +4,25 @@ import { RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SessionPanel } from "@/components/stats/session-panel";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { EventDetail } from "@/components/stats/event-detail";
+import { EventsCatalog } from "@/components/stats/events-catalog";
 import { NativeSelect } from "@/components/ui/native-select";
-import { REGIONS, type Region, type TournamentSummary, type TournamentWindow } from "@/lib/fortnite/parse";
+import { inRegion } from "@/lib/fortnite/catalog";
+import { REGIONS, isRegion, type Region, type TournamentSummary } from "@/lib/fortnite/parse";
 import { pickDefaultSession, type SessionView } from "@/lib/fortnite/session";
 import { cn } from "@/lib/utils";
 
-function windowLabel(item: TournamentWindow): string {
-  const day = new Date(item.beginTime).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${day} · ${item.windowId}${item.qualSpots ? ` · top ${item.qualSpots.toLocaleString()}` : ""}`;
+const REGION_KEY = "hub-region";
+
+function savedRegion(): Region {
+  const saved = typeof window === "undefined" ? null : window.localStorage.getItem(REGION_KEY);
+  return saved && isRegion(saved) ? saved : "EU";
 }
 
 export function SessionBoard({ accountId }: { accountId: string | null }) {
-  const [region, setRegion] = useState<Region>("EU");
+  // Only mounts after Convex auth resolves in the browser, so reading localStorage here can't mismatch SSR.
+  const [region, setRegion] = useState<Region>(savedRegion);
+  const [now, setNow] = useState(() => Date.now());
   const [events, setEvents] = useState<TournamentSummary[] | null>(null);
   const [eventId, setEventId] = useState<string>("");
   const [windowId, setWindowId] = useState<string>("");
@@ -47,7 +47,11 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
       .then((body) => {
         if (cancelled) return;
         setEvents(body.tournaments);
-        const picked = pickDefaultSession(body.tournaments, Date.now());
+        setNow(Date.now());
+        const picked = pickDefaultSession(
+          body.tournaments.filter((item) => inRegion(item, region)),
+          Date.now(),
+        );
         setEventId(picked?.eventId ?? "");
         setWindowId(picked?.windowId ?? "");
         setAppliedPoints("");
@@ -93,75 +97,56 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
   const busy = loadingList || loadingSession;
   const empty = events !== null && events.length === 0;
 
+  function pickEvent(next: string) {
+    const picked = events?.find((item) => item.eventId === next);
+    const choice = picked ? pickDefaultSession([picked], Date.now()) : null;
+    setEventId(next);
+    setWindowId(choice?.windowId ?? "");
+    setAppliedPoints("");
+    requestAnimationFrame(() =>
+      document.getElementById("event-detail")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
+
   return (
-    <section className="grid gap-4" aria-labelledby="sessions-heading" aria-busy={busy}>
+    <section className="grid gap-5" aria-labelledby="sessions-heading" aria-busy={busy}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="grid gap-1">
           <h2 id="sessions-heading" className="text-xl font-semibold tracking-tight">
             Tournaments
           </h2>
-          <p className="text-sm text-muted-foreground">Live qual line, cutoff history, and the board around you.</p>
+          <p className="text-sm text-muted-foreground">Pick a cup to see the qual line and the board around you.</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={busy || !windowId}
-          onClick={() => setRefresh((value) => value + 1)}
-        >
-          <RefreshCwIcon data-icon="inline-start" className={cn(busy && "motion-safe:animate-spin")} />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[8rem_minmax(0,2fr)_minmax(0,1.4fr)]">
-        <div className="grid gap-2">
-          <Label htmlFor="region">Region</Label>
-          <NativeSelect id="region" value={region} onChange={(change) => setRegion(change.target.value as Region)}>
+        <div className="flex items-center gap-2">
+          <NativeSelect
+            aria-label="Region"
+            className="w-28"
+            value={region}
+            onChange={(change) => {
+              const next = change.target.value as Region;
+              window.localStorage.setItem(REGION_KEY, next);
+              setRegion(next);
+            }}
+          >
             {REGIONS.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
             ))}
           </NativeSelect>
-        </div>
-        <div className="grid min-w-0 gap-2">
-          <Label htmlFor="event">Tournament</Label>
-          <NativeSelect
-            id="event"
-            value={eventId}
-            disabled={!events || events.length === 0}
-            onChange={(change) => {
-              const next = events?.find((item) => item.eventId === change.target.value);
-              const picked = next ? pickDefaultSession([next], Date.now()) : null;
-              setEventId(change.target.value);
-              setWindowId(picked?.windowId ?? "");
-              setAppliedPoints("");
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={busy || !windowId}
+            onClick={() => {
+              setNow(Date.now());
+              setRefresh((value) => value + 1);
             }}
           >
-            {(events ?? []).map((item) => (
-              <option key={item.eventId} value={item.eventId}>
-                {item.title}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="grid min-w-0 gap-2">
-          <Label htmlFor="window">Session</Label>
-          <NativeSelect
-            id="window"
-            value={windowId}
-            disabled={!event}
-            onChange={(change) => {
-              setWindowId(change.target.value);
-              setAppliedPoints("");
-            }}
-          >
-            {(event?.windows ?? []).map((item) => (
-              <option key={item.windowId} value={item.windowId}>
-                {windowLabel(item)}
-              </option>
-            ))}
-          </NativeSelect>
+            <RefreshCwIcon data-icon="inline-start" className={cn(busy && "motion-safe:animate-spin")} />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -171,11 +156,40 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
         </p>
       ) : null}
 
-      {empty ? (
+      {events && !empty ? (
+        <EventsCatalog
+          key={region}
+          events={events}
+          region={region}
+          now={now}
+          selectedEventId={eventId}
+          onSelect={pickEvent}
+        />
+      ) : loadingList ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-hidden>
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="aspect-[4/5] animate-pulse rounded-xl bg-card" />
+          ))}
+        </div>
+      ) : empty ? (
         <p className="rounded-2xl border border-dashed border-border px-5 py-10 text-center text-sm text-muted-foreground">
           No tournaments listed for {region} right now.
         </p>
-      ) : view ? (
+      ) : null}
+
+      {event ? (
+        <EventDetail
+          event={event}
+          windowId={windowId}
+          now={now}
+          onWindow={(next) => {
+            setWindowId(next);
+            setAppliedPoints("");
+          }}
+        />
+      ) : null}
+
+      {view ? (
         <div className={cn("transition-opacity", loadingSession && "opacity-60")}>
           <SessionPanel
             key={`${view.title}:${view.windowId}`}
@@ -184,12 +198,12 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
             onPoints={setAppliedPoints}
           />
         </div>
-      ) : busy ? (
+      ) : loadingSession ? (
         <SessionSkeleton />
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        Leaderboard from the Osirion public API. Not affiliated with Epic or Osirion.
+        Tournaments and leaderboards from the Osirion public API. Not affiliated with Epic or Osirion.
         {view?.updatedAt ? ` Updated ${new Date(view.updatedAt).toLocaleTimeString()}.` : ""}
       </p>
     </section>

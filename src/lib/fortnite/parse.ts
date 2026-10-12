@@ -1,3 +1,4 @@
+import { eventDisplay, type EventDisplay } from "./event-display";
 import { advancementSpots, summarizeGames, type GameLine, type GameSummary } from "./qualify";
 
 export const REGIONS = ["EU", "NAE", "NAC", "NAW", "BR", "ASIA", "ME", "OCE"] as const;
@@ -21,6 +22,7 @@ export type TournamentSummary = {
   eventId: string;
   title: string;
   windows: TournamentWindow[];
+  display?: EventDisplay;
 };
 
 export type ParsedEntry = {
@@ -123,7 +125,12 @@ export function parseTournaments(payload: unknown): TournamentSummary[] {
       });
     }
     windows.sort((a, b) => Date.parse(b.beginTime) - Date.parse(a.beginTime));
-    if (windows.length > 0) tournaments.push({ eventId, title, windows });
+    const playlists = event.eventWindows.flatMap((raw) => {
+      const playlistId = text(record(raw)?.playlistId);
+      return playlistId ? [playlistId] : [];
+    });
+    const shown = eventDisplay({ eventId, title, display, regions: event.regions, playlists });
+    if (windows.length > 0) tournaments.push({ eventId, title: shown.name, windows, display: shown });
   }
   tournaments.sort((a, b) => Date.parse(b.windows[0]?.beginTime ?? "") - Date.parse(a.windows[0]?.beginTime ?? ""));
   return tournaments;
