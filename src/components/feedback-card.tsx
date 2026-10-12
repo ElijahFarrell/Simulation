@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { CALL_PARTS, type CallPart, type ScorePart } from "@/engine/constants";
 import { pointsLost } from "@/engine/scoring";
 import type { FeedbackTone, PhaseResult, ScoreBreakdown } from "@/engine/types";
+import { scoreTone, TONE_FILL, TONE_TEXT } from "@/lib/score-tone";
 
 const CALL_ORDER: CallPart[] = ["where", "when", "contact"];
 
@@ -18,9 +19,9 @@ const SCORE_LABELS: Record<ScorePart, string> = {
 };
 
 const TONE_CLASS: Record<FeedbackTone, string> = {
-  bad: "text-red-300",
-  warn: "text-amber-200",
-  good: "text-emerald-300",
+  bad: "border-destructive",
+  warn: "border-warning",
+  good: "border-success",
 };
 
 export function FeedbackCard({
@@ -36,11 +37,16 @@ export function FeedbackCard({
 }) {
   const lost = pointsLost(result.score);
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card size="sm">
+      <CardHeader>
         <div className="flex items-end justify-between">
-          <CardTitle className="text-base">Zone {result.zone.index}</CardTitle>
-          <p className="text-3xl font-semibold tabular-nums leading-none">{result.score.total}</p>
+          <div className="grid gap-1">
+            <p className="eyebrow">Zone {result.zone.index} result</p>
+            <CardTitle className="text-lg font-semibold">{verdict(result.score.total)}</CardTitle>
+          </div>
+          <p className={`stat-figure text-4xl leading-none ${TONE_TEXT[scoreTone(result.score.total)]}`}>
+            {result.score.total}
+          </p>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
@@ -49,7 +55,7 @@ export function FeedbackCard({
         ))}
         <ul className="grid gap-2 pt-1">
           {result.feedback.map((line) => (
-            <li key={line.ruleId} className={`text-sm ${TONE_CLASS[line.tone]}`}>
+            <li key={line.ruleId} className={`border-l-2 pl-3 text-sm leading-5 ${TONE_CLASS[line.tone]}`}>
               {line.text}
             </li>
           ))}
@@ -82,7 +88,7 @@ function CallPartScores({ part, score, lost }: { part: CallPart; score: ScoreBre
     <section className="grid gap-1.5">
       <div className="flex items-baseline justify-between text-xs">
         <h3 className="font-medium">{CALL_PARTS[part].label}</h3>
-        <span className={lost > 0 ? "tabular-nums text-muted-foreground" : "text-emerald-300"}>
+        <span className={lost > 0 ? "tabular-nums text-muted-foreground" : "text-success"}>
           {lost > 0 ? `−${lost}` : "clean"}
         </span>
       </div>
@@ -99,9 +105,16 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
     <div className="grid grid-cols-[7.25rem_1fr_2rem] items-center gap-2 text-xs">
       <span className="text-muted-foreground">{label}</span>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-        <div className="h-full rounded-full bg-primary" style={{ width: `${width}%` }} />
+        <div className={`h-full rounded-full ${TONE_FILL[scoreTone(width)]}`} style={{ width: `${width}%` }} />
       </div>
-      <span className="text-right tabular-nums">{width}</span>
+      <span className="stat-figure text-right">{width}</span>
     </div>
   );
+}
+
+function verdict(total: number): string {
+  const tone = scoreTone(total);
+  if (tone === "good") return "Good call";
+  if (tone === "warn") return "Playable";
+  return "Costly call";
 }

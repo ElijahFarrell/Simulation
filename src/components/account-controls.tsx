@@ -1,7 +1,6 @@
 "use client";
 
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { clerkEnabled } from "@/lib/clerk-enabled";
 
@@ -20,9 +19,6 @@ export function AccountControls() {
         </SignUpButton>
       </Show>
       <Show when="signed-in">
-        <Link href="/stats" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          Hub
-        </Link>
         <UserButton />
       </Show>
     </div>

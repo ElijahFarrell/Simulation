@@ -2,11 +2,12 @@
 
 import { type Chat, useChat } from "@ai-sdk/react";
 import { APICallError, type UIMessage } from "ai";
-import { SendIcon, SquareIcon } from "lucide-react";
+import { SendIcon, SparklesIcon, SquareIcon } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CoachMessage } from "@/components/coach-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Segmented, SegmentedItem } from "@/components/ui/segmented";
 import { MAX_QUESTION_CHARS, PASSCODE_HEADER } from "@/lib/coach/constants";
 import { coachStarters } from "@/lib/coach/context";
 import { readPasscode, subscribePasscode, writePasscode } from "@/lib/coach/passcode-store";
@@ -31,16 +32,29 @@ export function CoachPanel({
       aria-label="Coach"
       className="flex h-[min(24rem,55svh)] flex-col gap-3 overflow-hidden rounded-xl border bg-card p-3 sm:p-4 lg:h-full lg:max-h-full lg:min-h-0"
     >
-      <div className="grid gap-2">
-        <h2 className="text-base font-semibold">{watching}</h2>
-        <div className="flex gap-2">
-          <Button type="button" size="sm" variant={wholeGame ? "outline" : "secondary"} onClick={() => onWholeGame(false)}>
-            This zone
-          </Button>
-          <Button type="button" size="sm" variant={wholeGame ? "secondary" : "outline"} onClick={() => onWholeGame(true)}>
-            Whole game
-          </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-brand/15 text-brand">
+            <SparklesIcon className="size-4" aria-hidden />
+          </span>
+          <div className="grid">
+            <h2 className="text-sm font-semibold">Coach</h2>
+            <p className="text-xs text-muted-foreground">{watching}</p>
+          </div>
         </div>
+        <Segmented
+          aria-label="What the coach looks at"
+          value={wholeGame ? "game" : "zone"}
+          onValueChange={(value) => onWholeGame(value === "game")}
+          className="w-auto"
+        >
+          <SegmentedItem value="zone" className="min-h-7 px-2.5 text-xs whitespace-nowrap">
+            This zone
+          </SegmentedItem>
+          <SegmentedItem value="game" className="min-h-7 px-2.5 text-xs whitespace-nowrap">
+            Whole game
+          </SegmentedItem>
+        </Segmented>
       </div>
       <CoachChat chat={chat} context={context} />
     </section>

@@ -2,6 +2,7 @@
 
 import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { ArrowLeftIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { CoachPanel } from "@/components/coach-dialog";
 import { DecisionPanel } from "@/components/decision-panel";
@@ -14,8 +15,10 @@ import { OverlayToggles } from "@/components/overlay-toggles";
 import { SessionSummary } from "@/components/session-summary";
 import { StartScreen } from "@/components/start-screen";
 import { StatePanel } from "@/components/state-panel";
+import { BrandMark } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { SECTOR_COUNT } from "@/engine/constants";
+import { ZoneTrack } from "@/components/zone-track";
+import { SECTOR_COUNT, ZONE_TABLE } from "@/engine/constants";
 import { coachHint } from "@/engine/coach";
 import { describeCall, heldCenter } from "@/engine/feedback";
 import { getPhaseView } from "@/engine/game";
@@ -159,14 +162,25 @@ export function RotationLab() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full flex-col gap-3 px-3 py-3 sm:px-4 lg:h-dvh lg:max-h-dvh lg:overflow-hidden lg:px-5 lg:py-4">
-      <header className="flex shrink-0 items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground sm:text-sm">Rotation Lab</p>
-          <h1 className="text-lg font-semibold sm:text-xl">Seed {game.seed}</h1>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => dispatch({ type: "menu" })}>
+      <header className="flex shrink-0 items-center gap-3 sm:gap-5">
+        <Button type="button" variant="ghost" size="sm" onClick={() => dispatch({ type: "menu" })}>
+          <ArrowLeftIcon data-icon="inline-start" />
           Menu
         </Button>
+        <h1 className="flex items-center gap-2 text-sm font-semibold">
+          <BrandMark className="size-6" />
+          <span className="hidden sm:inline">Rotation Lab</span>
+        </h1>
+        <ZoneTrack
+          className="max-w-md flex-1"
+          current={view.zone.index}
+          total={ZONE_TABLE.length}
+          history={game.history}
+        />
+        <p className="ml-auto font-mono text-xs text-muted-foreground">
+          <span className="hidden sm:inline">Seed </span>
+          {game.seed}
+        </p>
       </header>
       <div className="grid items-start gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)_minmax(18rem,24rem)] lg:items-stretch lg:gap-4">
         <div className="flex min-h-0 flex-col gap-2">
@@ -219,7 +233,12 @@ export function RotationLab() {
           </div>
         </div>
         <div className="grid content-start gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-          {scenario ? <p className="text-sm text-muted-foreground">{scenario.lesson}</p> : null}
+          {scenario ? (
+            <div className="grid gap-1 rounded-xl border border-brand/25 bg-brand/5 p-3">
+              <p className="eyebrow text-brand">Lesson · {scenario.title}</p>
+              <p className="text-sm leading-6 text-muted-foreground">{scenario.lesson}</p>
+            </div>
+          ) : null}
           <StatePanel
             view={view}
             teamsAlive={view.teamsAlive}

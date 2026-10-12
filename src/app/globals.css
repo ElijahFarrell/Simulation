@@ -42,6 +42,11 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-you: var(--you);
+  --color-brand: var(--brand);
+  --color-zone: var(--zone);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -67,6 +72,11 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --brand: oklch(0.5 0.22 292);
+  --success: oklch(0.6 0.15 162);
+  --warning: oklch(0.7 0.15 70);
+  --you: oklch(0.78 0.17 90);
+  --zone: oklch(0.6 0.14 258);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -87,37 +97,43 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Cool navy neutrals so panels sit in the same family as the map canvas (#10141c). */
+  --background: oklch(0.155 0.014 262);
+  --foreground: oklch(0.97 0.004 262);
+  --card: oklch(0.195 0.016 262);
+  --card-foreground: oklch(0.97 0.004 262);
+  --popover: oklch(0.215 0.018 262);
+  --popover-foreground: oklch(0.97 0.004 262);
+  --primary: oklch(0.585 0.22 292);
+  --primary-foreground: oklch(0.99 0 0);
+  --brand: oklch(0.78 0.13 292);
+  --secondary: oklch(0.255 0.018 262);
+  --secondary-foreground: oklch(0.97 0.004 262);
+  --muted: oklch(0.245 0.016 262);
+  --muted-foreground: oklch(0.72 0.02 262);
+  --accent: oklch(0.27 0.03 285);
+  --accent-foreground: oklch(0.97 0.004 262);
+  --destructive: oklch(0.7 0.19 22);
+  --success: oklch(0.79 0.15 162);
+  --warning: oklch(0.84 0.14 80);
+  --you: oklch(0.9 0.17 98);
+  --zone: oklch(0.79 0.1 258);
+  --border: oklch(0.97 0.01 262 / 9%);
+  --input: oklch(0.97 0.01 262 / 13%);
+  --ring: oklch(0.66 0.2 292);
+  --chart-1: oklch(0.66 0.2 292);
+  --chart-2: oklch(0.79 0.1 258);
+  --chart-3: oklch(0.79 0.15 162);
+  --chart-4: oklch(0.84 0.14 80);
+  --chart-5: oklch(0.7 0.19 22);
+  --sidebar: oklch(0.195 0.016 262);
+  --sidebar-foreground: oklch(0.97 0.004 262);
+  --sidebar-primary: oklch(0.66 0.2 292);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.255 0.018 262);
+  --sidebar-accent-foreground: oklch(0.97 0.004 262);
+  --sidebar-border: oklch(0.97 0.01 262 / 9%);
+  --sidebar-ring: oklch(0.66 0.2 292);
 }
 
 @layer base {
@@ -129,5 +145,23 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Soft storm glow behind the menu and hub. Off on the play screen so the map stays the brightest thing. */
+  .page-glow {
+    background-image:
+      radial-gradient(60rem 28rem at 15% -10%, oklch(0.66 0.2 292 / 14%), transparent 70%),
+      radial-gradient(48rem 24rem at 95% 0%, oklch(0.79 0.1 258 / 9%), transparent 70%);
+    background-repeat: no-repeat;
+  }
+
+  .eyebrow {
+    @apply text-[0.7rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase;
+  }
+
+  .stat-figure {
+    @apply font-mono font-semibold tracking-tight tabular-nums;
   }
 }

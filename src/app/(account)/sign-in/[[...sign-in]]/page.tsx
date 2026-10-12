@@ -1,9 +1,13 @@
 import { SignIn } from "@clerk/nextjs";
+import { SiteHeader } from "@/components/site-header";
 
 export default function SignInPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
-      <SignIn />
-    </main>
+    <div className="page-glow flex min-h-dvh flex-col">
+      <SiteHeader />
+      <main className="flex flex-1 items-center justify-center p-4">
+        <SignIn />
+      </main>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { api } from "@convex/_generated/api";
 import { useMutation } from "convex/react";
+import { CheckIcon, Link2Icon } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,11 +22,13 @@ export function EpicLink({
   const [choices, setChoices] = useState<EpicMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   async function persist(match: EpicMatch) {
     await linkEpic({ epicAccountId: match.accountId, epicDisplayName: match.displayName });
     setChoices([]);
     setName("");
+    setEditing(false);
   }
 
   async function lookup(event: FormEvent) {
@@ -51,24 +54,41 @@ export function EpicLink({
     }
   }
 
-  return (
-    <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 className="text-sm font-medium">Epic account</h2>
-          <p className="text-sm text-muted-foreground">
-            {epicDisplayName
-              ? `${epicDisplayName} is linked. Sessions highlight that account.`
-              : "Look up your Epic name to pin your row on the leaderboard."}
+  if (epicDisplayName && !editing) {
+    return (
+      <section className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-you/15 text-lg font-semibold text-you">
+          {epicDisplayName.slice(0, 1).toUpperCase()}
+        </span>
+        <div className="grid min-w-0 flex-1 gap-0.5">
+          <p className="eyebrow flex items-center gap-1.5">
+            <CheckIcon className="size-3 text-success" aria-hidden />
+            Epic account linked
           </p>
+          <p className="truncate text-lg font-semibold">{epicDisplayName}</p>
+          {epicAccountId ? (
+            <p className="truncate font-mono text-[0.7rem] text-muted-foreground">{epicAccountId}</p>
+          ) : null}
         </div>
-        {epicAccountId ? (
-          <p className="font-mono text-xs text-muted-foreground">{epicAccountId}</p>
-        ) : null}
+        <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+          Change
+        </Button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="grid gap-4 rounded-2xl border border-brand/30 bg-card p-5">
+      <div className="grid gap-1">
+        <p className="eyebrow text-brand">{epicDisplayName ? "Change account" : "Step 1"}</p>
+        <h2 className="text-lg font-semibold">Link your Epic name</h2>
+        <p className="text-sm text-muted-foreground">
+          Your row gets pinned and highlighted on every leaderboard, with your games and damage ratio.
+        </p>
       </div>
       <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={(event) => void lookup(event)}>
         <div className="grid flex-1 gap-2">
-          <Label htmlFor="epic-name">Epic name</Label>
+          <Label htmlFor="epic-name">Epic display name</Label>
           <Input
             id="epic-name"
             value={name}
@@ -78,32 +98,43 @@ export function EpicLink({
             onChange={(event) => setName(event.target.value)}
           />
         </div>
-        <Button type="submit" disabled={busy || name.trim().length === 0}>
-          {busy ? "Looking up…" : "Link account"}
-        </Button>
+        <div className="flex gap-2">
+          {epicDisplayName ? (
+            <Button type="button" variant="ghost" size="lg" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          ) : null}
+          <Button type="submit" size="lg" disabled={busy || name.trim().length === 0}>
+            <Link2Icon data-icon="inline-start" />
+            {busy ? "Looking up…" : "Link account"}
+          </Button>
+        </div>
       </form>
       {choices.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
-          {choices.map((match) => (
-            <Button
-              key={match.accountId}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                setError(null);
-                void persist(match)
-                  .catch((reason: unknown) => {
-                    setError(reason instanceof Error ? reason.message : "Couldn't save that Epic account.");
-                  })
-                  .finally(() => setBusy(false));
-              }}
-            >
-              {match.displayName}
-            </Button>
-          ))}
+        <div className="grid gap-2">
+          <p className="text-sm text-muted-foreground">More than one match. Pick yours:</p>
+          <div className="flex flex-wrap gap-2">
+            {choices.map((match) => (
+              <Button
+                key={match.accountId}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  setError(null);
+                  void persist(match)
+                    .catch((reason: unknown) => {
+                      setError(reason instanceof Error ? reason.message : "Couldn't save that Epic account.");
+                    })
+                    .finally(() => setBusy(false));
+                }}
+              >
+                {match.displayName}
+              </Button>
+            ))}
+          </div>
         </div>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

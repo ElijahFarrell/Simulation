@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import type { GameState } from "@/engine/types";
 import { averageScore, worstHabit } from "@/lib/review";
+import { scoreTone, TONE_FILL, TONE_TEXT } from "@/lib/score-tone";
 
 export function SessionSummary({
   game,
@@ -38,25 +39,34 @@ export function SessionSummary({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{won ? "You won the lobby" : `You placed ${ordinal(place)}`}</DialogTitle>
+          <p className={won ? "eyebrow text-you" : "eyebrow"}>{won ? "Victory royale" : "Game over"}</p>
+          <DialogTitle className="text-2xl font-semibold tracking-tight">
+            {won ? "You won the lobby" : `You placed ${ordinal(place)}`}
+          </DialogTitle>
           <DialogDescription>
-            Average score {average} over {game.history.length} zones. Seed {game.seed}.
+            {game.history.length} zones played on seed <span className="font-mono">{game.seed}</span>.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3">
-          <div className="flex h-16 items-end gap-1" aria-hidden>
-            {game.history.map((phase) => (
-              <div key={phase.zone.index} className="flex flex-1 flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-sm bg-primary"
-                  style={{ height: `${Math.max(8, phase.score.total * 0.5)}px` }}
-                />
-                <span className="text-[10px] text-muted-foreground">{phase.zone.index}</span>
-              </div>
-            ))}
+        <div className="grid gap-4">
+          <div className="flex items-end gap-4">
+            <div className="grid gap-1">
+              <p className="eyebrow">Avg score</p>
+              <p className={`stat-figure text-4xl leading-none ${TONE_TEXT[scoreTone(average)]}`}>{average}</p>
+            </div>
+            <div className="flex h-16 flex-1 items-end gap-1" aria-hidden>
+              {game.history.map((phase) => (
+                <div key={phase.zone.index} className="flex flex-1 flex-col items-center gap-1">
+                  <div
+                    className={`w-full rounded-sm ${TONE_FILL[scoreTone(phase.score.total)]}`}
+                    style={{ height: `${Math.max(4, phase.score.total * 0.48)}px` }}
+                  />
+                  <span className="font-mono text-[10px] text-muted-foreground">{phase.zone.index}</span>
+                </div>
+              ))}
+            </div>
           </div>
           {habit ? (
-            <p className="text-sm">
+            <p className="rounded-lg border-l-2 border-warning bg-warning/5 px-3 py-2 text-sm leading-5">
               <span className="font-medium">You keep doing this: </span>
               {habit.lesson}
             </p>

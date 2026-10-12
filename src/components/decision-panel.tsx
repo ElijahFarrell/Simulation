@@ -2,23 +2,25 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Kbd } from "@/components/ui/kbd";
+import { Segmented, SegmentedItem } from "@/components/ui/segmented";
 import { PULL_COPY } from "@/engine/constants";
 import type { Engagement, PullType, Timing } from "@/engine/types";
 
 const PULLS: PullType[] = ["normal", "deep", "half"];
 
-const TIMINGS: { value: Timing; label: string; hint: string }[] = [
-  { value: "early", label: "Right away", hint: "Leave as soon as it shows" },
-  { value: "standard", label: "Wait a bit", hint: "Leave in the middle" },
-  { value: "late", label: "Loot first", hint: "Grab mats, then go" },
+type Choice<T> = { value: T; label: string; hint: string; key: string };
+
+const TIMINGS: Choice<Timing>[] = [
+  { value: "early", label: "Right away", hint: "Leave as soon as it shows", key: "1" },
+  { value: "standard", label: "Wait a bit", hint: "Leave in the middle", key: "2" },
+  { value: "late", label: "Loot first", hint: "Grab mats, then go", key: "3" },
 ];
 
-const ENGAGEMENTS: { value: Engagement; label: string; hint: string }[] = [
-  { value: "avoid", label: "Stay away", hint: "Don't fight" },
-  { value: "tag", label: "Hit and leave", hint: "Shoot once, then go" },
-  { value: "fight", label: "Full fight", hint: "Stay until someone loses" },
+const ENGAGEMENTS: Choice<Engagement>[] = [
+  { value: "avoid", label: "Stay away", hint: "Don't fight", key: "Q" },
+  { value: "tag", label: "Hit and leave", hint: "Shoot once, then go", key: "W" },
+  { value: "fight", label: "Full fight", hint: "Stay until someone loses", key: "E" },
 ];
 
 export function DecisionPanel({
@@ -51,15 +53,14 @@ export function DecisionPanel({
   onLock: () => void;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Your move</CardTitle>
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Your call</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         {showQuiz ? <PullQuiz pull={pull} guess={pullGuess} onGuess={onGuess} /> : null}
         <ChoiceGroup
           legend="When you leave"
-          name="timing"
           value={timing}
           options={TIMINGS}
           onChange={onTiming}
@@ -67,20 +68,27 @@ export function DecisionPanel({
         />
         <ChoiceGroup
           legend="If you meet a team"
-          name="engagement"
           value={engagement}
           options={ENGAGEMENTS}
           onChange={onEngagement}
           disabled={busy}
         />
-        <p className="text-sm text-foreground">{call}</p>
-        {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+        <p
+          className={
+            canLock
+              ? "rounded-lg border-l-2 border-you bg-you/5 px-3 py-2 text-sm leading-5"
+              : "rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground"
+          }
+        >
+          {call}
+        </p>
+        {hint ? <p className="text-sm leading-5 text-muted-foreground">{hint}</p> : null}
       </CardContent>
-      <CardFooter className="flex-col items-stretch gap-2">
-        <Button type="button" disabled={!canLock || busy} onClick={onLock}>
+      <CardFooter>
+        <Button type="button" size="lg" className="h-10 w-full text-base" disabled={!canLock || busy} onClick={onLock}>
           {busy ? "Moving…" : "Go"}
+          {busy ? null : <Kbd className="ml-1 border-white/25 bg-white/15 text-primary-foreground">Enter</Kbd>}
         </Button>
-        <p className="text-xs text-muted-foreground">Keys: 1 2 3 when · Q W E fight · Enter goes</p>
       </CardFooter>
     </Card>
   );
@@ -97,9 +105,9 @@ function PullQuiz({
 }) {
   if (guess === null) {
     return (
-      <div className="grid gap-2">
+      <div className="grid gap-2 rounded-lg bg-zone/10 p-3">
         <p className="text-sm font-medium">Look at the blue ring. What kind of pull is this?</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           {PULLS.map((option) => (
             <Button key={option} type="button" size="sm" variant="outline" onClick={() => onGuess(option)}>
               {PULL_COPY[option].name}
@@ -112,7 +120,13 @@ function PullQuiz({
   const answer = PULL_COPY[pull];
   const right = guess === pull;
   return (
-    <p className={right ? "text-sm text-emerald-300" : "text-sm text-amber-200"}>
+    <p
+      className={
+        right
+          ? "rounded-lg bg-success/10 px-3 py-2 text-sm leading-5 text-success"
+          : "rounded-lg bg-warning/10 px-3 py-2 text-sm leading-5 text-warning"
+      }
+    >
       {right ? "Yes. " : `Not quite. This is a ${answer.name.toLowerCase()}. `}
       {answer.line}
     </p>
@@ -121,36 +135,40 @@ function PullQuiz({
 
 function ChoiceGroup<T extends string>({
   legend,
-  name,
   value,
   options,
   onChange,
   disabled,
 }: {
   legend: string;
-  name: string;
   value: T;
-  options: { value: T; label: string; hint: string }[];
+  options: Choice<T>[];
   onChange: (value: T) => void;
   disabled: boolean;
 }) {
+  const active = options.find((option) => option.value === value);
   return (
     <fieldset className="grid gap-2" disabled={disabled}>
-      <legend className="text-sm font-medium">{legend}</legend>
-      <RadioGroup value={value} onValueChange={(next) => onChange(next as T)} className="grid gap-1.5">
-        {options.map((option) => {
-          const id = `${name}-${option.value}`;
-          return (
-            <div key={option.value} className="flex items-center gap-2">
-              <RadioGroupItem value={option.value} id={id} />
-              <Label htmlFor={id} className="font-normal">
-                {option.label}
-                <span className="text-muted-foreground"> · {option.hint}</span>
-              </Label>
-            </div>
-          );
-        })}
-      </RadioGroup>
+      <legend className="eyebrow mb-2">{legend}</legend>
+      <Segmented
+        aria-label={legend}
+        value={value}
+        disabled={disabled}
+        onValueChange={(next) => onChange(next as T)}
+        className="grid grid-cols-3"
+      >
+        {options.map((option) => (
+          <SegmentedItem
+            key={option.value}
+            value={option.value}
+            className="min-h-12 flex-col gap-1 px-1.5 py-1.5 text-center text-[0.8rem] leading-tight"
+          >
+            {option.label}
+            <Kbd className="hidden h-4 min-w-4 text-[0.6rem] sm:inline-flex">{option.key}</Kbd>
+          </SegmentedItem>
+        ))}
+      </Segmented>
+      {active ? <p className="text-xs text-muted-foreground">{active.hint}</p> : null}
     </fieldset>
   );
 }

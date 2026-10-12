@@ -1,5 +1,7 @@
 "use client";
 
+import { CloudLightningIcon, HeartPulseIcon, LayersIcon, ShieldIcon, UsersIcon, ZapIcon } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PULL_COPY, ZONE_TABLE } from "@/engine/constants";
@@ -17,61 +19,85 @@ export function StatePanel({
   const { player, zone } = view;
   const pull = PULL_COPY[zone.pull];
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card size="sm">
+      <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">
-            Zone {zone.index}
-            <span className="text-muted-foreground"> / {ZONE_TABLE.length}</span>
+          <CardTitle className="flex items-baseline gap-1 text-lg font-semibold">
+            Zone <span className="stat-figure">{zone.index}</span>
+            <span className="stat-figure text-sm text-muted-foreground">/ {ZONE_TABLE.length}</span>
           </CardTitle>
           <Badge variant="outline">{view.phaseName}</Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">{player.squadSize === 1 ? "Players alive" : "Teams alive"}</span>
-          <span className="tabular-nums">{teamsAlive}</span>
+        <dl className="grid grid-cols-2 gap-2">
+          <Stat icon={UsersIcon} label={player.squadSize === 1 ? "Alive" : "Teams"} value={teamsAlive} />
+          <Stat
+            icon={ShieldIcon}
+            label={player.squadSize === 1 ? "You" : "Trio"}
+            value={<AlivePips alive={player.alive} squadSize={player.squadSize} />}
+          />
+          <Stat icon={LayersIcon} label="Mats" value={player.mats} />
+          <Stat icon={HeartPulseIcon} label="Heals" value={player.heals} />
+        </dl>
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="secondary">
+            <CloudLightningIcon data-icon="inline-start" />
+            Storm {zone.stormDps}/s
+          </Badge>
+          {zone.surgeActive ? (
+            <Badge variant="destructive">
+              <ZapIcon data-icon="inline-start" />
+              Surge on
+            </Badge>
+          ) : (
+            <Badge variant="secondary">No surge</Badge>
+          )}
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">{player.squadSize === 1 ? "You" : "Your trio"}</span>
-          <AlivePips alive={player.alive} squadSize={player.squadSize} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Mats</span>
-          <span className="tabular-nums">{player.mats}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Heals</span>
-          <span className="tabular-nums">{player.heals}</span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Storm</span>
-          <span className="tabular-nums">{zone.stormDps}/s</span>
-        </div>
+        {zone.surgeActive ? (
+          <p className="text-xs text-muted-foreground">Teams with the least damage get hurt.</p>
+        ) : null}
         {revealPull ? (
-          <p className="text-sm">
-            <span className="font-medium">{pull.name}.</span> {pull.line}
+          <p className="rounded-lg bg-zone/10 px-3 py-2 text-sm leading-5">
+            <span className="font-semibold text-zone">{pull.name}.</span> {pull.line}
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">Name the pull before you go.</p>
-        )}
-        {zone.surgeActive ? (
-          <Badge variant="destructive">Surge is on. Teams with the least damage get hurt.</Badge>
-        ) : (
-          <Badge variant="secondary">No surge this zone</Badge>
+          <p className="rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
+            Name the pull before you go.
+          </p>
         )}
       </CardContent>
     </Card>
   );
 }
 
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-2.5 py-2">
+      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="size-3.5" aria-hidden />
+        {label}
+      </dt>
+      <dd className="stat-figure text-sm">{value}</dd>
+    </div>
+  );
+}
+
 function AlivePips({ alive, squadSize }: { alive: number; squadSize: number }) {
   return (
-    <span className="flex gap-1" aria-label={`${alive} of ${squadSize} alive`}>
+    <span className="flex gap-1" role="img" aria-label={`${alive} of ${squadSize} alive`}>
       {Array.from({ length: squadSize }, (_, index) => (
         <span
           key={index}
-          className={index < alive ? "size-2.5 rounded-full bg-emerald-400" : "size-2.5 rounded-full bg-muted"}
+          className={index < alive ? "size-2.5 rounded-full bg-success" : "size-2.5 rounded-full bg-muted-foreground/30"}
         />
       ))}
     </span>

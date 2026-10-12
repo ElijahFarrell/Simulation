@@ -38,7 +38,7 @@ In Clerk, add a JWT template named `convex` with `"aud": "convex"` (or turn on t
 
 - The white ring is the storm you are in. The blue ring is the zone you are rotating into.
 - Green wedges are dead sides. Red wedges are stacked.
-- The dashed circle is every place the zone after next can spawn. Turn it on with **Next pull**.
+- The dashed circle is every place the zone after next can spawn. Turn it on with **Pull range**.
 - **Heat** shows where a hold leaves you a shorter rotate next zone. Greener is shorter.
 - Early leaves on the reveal, while the old zone is still safe. Late farms after the storm has started moving.
 

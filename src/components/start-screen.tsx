@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { AccountControls } from "@/components/account-controls";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { ArrowRightIcon, MapPinIcon, SwordsIcon, TimerIcon } from "lucide-react";
+import { LobbySetup } from "@/components/lobby-setup";
+import { MapLegend } from "@/components/map-legend";
+import { SiteHeader } from "@/components/site-header";
+import { StatTile } from "@/components/stat-tile";
 import type { LabSettings } from "@/components/lab-state";
-import type { DropStyle } from "@/engine/types";
-import { GAME_MODES, ZONE_TABLE } from "@/engine/constants";
+import { ZONE_TABLE } from "@/engine/constants";
 import { SCENARIOS } from "@/engine/scenarios";
 import type { SavedStats } from "@/lib/review";
 import { lifetimeHabit } from "@/lib/review";
+
+const CALLS = [
+  { icon: MapPinIcon, title: "Where", line: "Pin the spot you rotate to." },
+  { icon: TimerIcon, title: "When", line: "Leave now, mid, or after loot." },
+  { icon: SwordsIcon, title: "Contact", line: "Avoid, tag, or take the fight." },
+];
 
 export function StartScreen({
   settings,
@@ -25,173 +28,97 @@ export function StartScreen({
   onSettings: (settings: LabSettings) => void;
   onStart: (seed: number, scenarioId: string | null) => void;
 }) {
-  const [seedText, setSeedText] = useState("");
-  const habit = lifetimeHabit(stats);
-  const rules = GAME_MODES[settings.mode];
-
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:py-12">
-      <header className="grid gap-2">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-medium text-muted-foreground">Solos and trios practice</p>
-          <AccountControls />
-        </div>
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Rotation Lab</h1>
-        <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-          Each zone you make three choices: where you go, when you leave, and what you do if you meet a
-          team. There are {ZONE_TABLE.length} zones, like a real game. Name the pull, then make the move.
-        </p>
-      </header>
+    <div className="page-glow min-h-dvh">
+      <SiteHeader />
+      <main className="mx-auto grid w-full max-w-6xl gap-14 px-4 py-10 sm:py-14">
+        <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:items-start lg:gap-x-14">
+          <div className="grid gap-4">
+              <p className="eyebrow text-brand">Solos and trios IGL practice</p>
+              <h1 className="max-w-xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+                Make the call before the zone does.
+              </h1>
+              <p className="max-w-xl text-base leading-7 text-muted-foreground">
+                {ZONE_TABLE.length} zones, like a real game. Each reveal you name the pull, then make three calls. The
+                sim plays it out and grades the decision.
+              </p>
+          </div>
+          <LobbySetup
+            className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
+            settings={settings}
+            onSettings={onSettings}
+            onStart={(seed) => onStart(seed, null)}
+          />
+          <div className="grid gap-8">
+            <ol className="grid gap-3 sm:grid-cols-3">
+              {CALLS.map((call, index) => (
+                <li key={call.title} className="grid gap-2 rounded-xl border border-border bg-card/60 p-4">
+                  <div className="flex items-center justify-between">
+                    <call.icon className="size-4 text-brand" aria-hidden />
+                    <span className="font-mono text-xs text-muted-foreground">0{index + 1}</span>
+                  </div>
+                  <p className="text-sm font-semibold">{call.title}</p>
+                  <p className="text-sm text-muted-foreground">{call.line}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="grid gap-4 rounded-xl border border-border bg-card/40 p-4">
+              <p className="eyebrow">Reading the map</p>
+              <MapLegend />
+            </div>
+            {stats.games > 0 ? <Record stats={stats} /> : null}
+          </div>
+        </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Start a lobby</CardTitle>
-          <CardDescription>
-            White ring is the storm right now. Blue ring is where you need to end up. Dashed ring is where
-            the next zone can land. Green means few teams. Red means lots of teams.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="seed">Seed</Label>
-            <Input
-              id="seed"
-              inputMode="numeric"
-              placeholder="Leave blank for a random lobby"
-              value={seedText}
-              onChange={(event) => setSeedText(event.target.value.replace(/\D/g, "").slice(0, 10))}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Game mode</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={settings.mode === "trios" ? "default" : "outline"}
-                onClick={() =>
-                  onSettings({ ...settings, mode: "trios", teamCount: GAME_MODES.trios.teamCount })
-                }
-              >
-                Trios
-              </Button>
-              <Button
-                type="button"
-                variant={settings.mode === "solos" ? "default" : "outline"}
-                onClick={() =>
-                  onSettings({ ...settings, mode: "solos", teamCount: GAME_MODES.solos.teamCount })
-                }
-              >
-                Solos
-              </Button>
+        <section className="grid gap-4" aria-labelledby="lessons-heading">
+          <div className="flex items-end justify-between gap-4">
+            <div className="grid gap-1">
+              <h2 id="lessons-heading" className="text-xl font-semibold tracking-tight">
+                Lessons
+              </h2>
+              <p className="text-sm text-muted-foreground">Fixed seeds, so you can run the same lobby until it clicks.</p>
             </div>
           </div>
-          <div className="grid gap-2">
-            <Label>Lobby</Label>
-            <div className="flex gap-2">
-              <Button
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {SCENARIOS.map((scenario, index) => (
+              <button
+                key={scenario.id}
                 type="button"
-                variant={settings.dropStyle === "opens" ? "default" : "outline"}
-                onClick={() => onSettings({ ...settings, dropStyle: "opens" })}
+                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors outline-none hover:border-brand/40 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+                onClick={() => onStart(scenario.seed, scenario.id)}
               >
-                Opens
-              </Button>
-              <Button
-                type="button"
-                variant={settings.dropStyle === "stacked" ? "default" : "outline"}
-                onClick={() => onSettings({ ...settings, dropStyle: "stacked" })}
-              >
-                Stacked
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">{lobbyCopy(settings.dropStyle)}</p>
+                <span className="font-mono text-xs text-brand">Lesson {index + 1}</span>
+                <span className="text-base font-semibold leading-snug">{scenario.title}</span>
+                <span className="text-sm leading-6 text-muted-foreground">{scenario.lesson}</span>
+                <span className="mt-auto flex items-center gap-1 pt-1 text-sm font-medium text-foreground/80 group-hover:text-brand">
+                  Play seed {scenario.seed}
+                  <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </button>
+            ))}
           </div>
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between text-sm">
-              <Label htmlFor="teams">
-                {`Teams (${rules.squadSize} ${rules.squadSize === 1 ? "player" : "players"} each, ${rules.maxTeams} max)`}
-              </Label>
-              <span className="tabular-nums text-muted-foreground">{settings.teamCount}</span>
-            </div>
-            <Slider
-              id="teams"
-              min={rules.minTeams}
-              max={rules.maxTeams}
-              step={1}
-              value={[settings.teamCount]}
-              onValueChange={(value) => {
-                const next = value[0];
-                if (next === undefined) return;
-                onSettings({ ...settings, teamCount: next });
-              }}
-            />
-          </div>
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between text-sm">
-              <Label htmlFor="fighters">Fighters in the lobby</Label>
-              <span className="tabular-nums text-muted-foreground">{Math.round(settings.fighterWeight * 100)}%</span>
-            </div>
-            <Slider
-              id="fighters"
-              min={0}
-              max={50}
-              step={5}
-              value={[Math.round(settings.fighterWeight * 100)]}
-              onValueChange={(value) => {
-                const next = value[0];
-                if (next === undefined) return;
-                onSettings({ ...settings, fighterWeight: next / 100 });
-              }}
-            />
-          </div>
-          <Button
-            type="button"
-            variant={settings.hints ? "secondary" : "outline"}
-            aria-pressed={settings.hints}
-            onClick={() => onSettings({ ...settings, hints: !settings.hints })}
-          >
-            {settings.hints ? "Hints on" : "Hints off"}
-          </Button>
-          <Button type="button" onClick={() => onStart(parseSeed(seedText), null)}>
-            Start game
-          </Button>
-        </CardContent>
-      </Card>
-
-      <section className="grid gap-3">
-        <h2 className="text-sm font-medium">Lessons</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SCENARIOS.map((scenario) => (
-            <button
-              key={scenario.id}
-              type="button"
-              className="rounded-xl border bg-card p-4 text-left transition-colors hover:bg-muted"
-              onClick={() => onStart(scenario.seed, scenario.id)}
-            >
-              <span className="block text-sm font-medium">{scenario.title}</span>
-              <span className="mt-1 block text-sm text-muted-foreground">{scenario.lesson}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {stats.games > 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {stats.games} games · {stats.wins} wins · best average {Math.round(stats.bestAverage)}
-          {habit ? ` · most common miss: ${habit.lesson}` : ""}
-        </p>
-      ) : null}
+        </section>
+      </main>
     </div>
   );
 }
 
-function lobbyCopy(style: DropStyle): string {
-  if (style === "stacked") return "Most teams pile onto a few drops. Dead sides are rare.";
-  return "Teams spread across the island, so quiet sides show up.";
-}
-
-function parseSeed(seedText: string): number {
-  if (seedText.trim() === "") return Math.floor(Math.random() * 1_000_000_000);
-  const parsed = Number(seedText);
-  if (!Number.isFinite(parsed)) return 1;
-  return Math.floor(parsed);
+function Record({ stats }: { stats: SavedStats }) {
+  const habit = lifetimeHabit(stats);
+  return (
+    <div className="grid gap-4 rounded-xl border border-border bg-card/40 p-4">
+      <p className="eyebrow">Your record on this device</p>
+      <div className="grid grid-cols-3 gap-4">
+        <StatTile label="Games" value={stats.games} />
+        <StatTile label="Wins" value={stats.wins} />
+        <StatTile label="Best avg" value={Math.round(stats.bestAverage)} />
+      </div>
+      {habit ? (
+        <p className="border-t border-border pt-3 text-sm">
+          <span className="text-muted-foreground">Most common miss: </span>
+          {habit.lesson}
+        </p>
+      ) : null}
+    </div>
+  );
 }

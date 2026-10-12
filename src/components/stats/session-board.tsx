@@ -1,72 +1,24 @@
 "use client";
 
+import { RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { SessionPanel } from "@/components/stats/session-panel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { REGIONS, type Region, type TournamentSummary } from "@/lib/fortnite/parse";
-import type { QualRead } from "@/lib/fortnite/qualify";
-import { qualificationHeadline } from "@/lib/fortnite/qualify";
-import { pickDefaultSession, type BoardRow, type SessionView } from "@/lib/fortnite/session";
+import { NativeSelect } from "@/components/ui/native-select";
+import { REGIONS, type Region, type TournamentSummary, type TournamentWindow } from "@/lib/fortnite/parse";
+import { pickDefaultSession, type SessionView } from "@/lib/fortnite/session";
+import { cn } from "@/lib/utils";
 
-const fieldClass = "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm";
-
-function ratioText(ratio: number | null): string {
-  return ratio === null ? "—" : ratio.toFixed(2);
-}
-
-function gapTone(read: QualRead): string {
-  if (read.status === "in" || (read.pointsOff !== null && read.pointsOff < 0)) return "text-emerald-400";
-  if (read.status === "out" && read.pointsOff !== null && read.pointsOff > 0) return "text-destructive";
-  return "text-foreground";
-}
-
-function gapFigure(read: QualRead): string {
-  if (read.status === "no-line") return "—";
-  if (read.pointsOff === null) return read.status === "in" ? "In" : "—";
-  if (read.pointsOff > 0) return read.pointsOff.toLocaleString();
-  if (read.pointsOff < 0) return `+${Math.abs(read.pointsOff).toLocaleString()}`;
-  return read.status === "in" ? "In" : "Tied";
-}
-
-function ScoreTable({ rows }: { rows: BoardRow[] }) {
-  if (rows.length === 0) return null;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left text-sm">
-        <thead className="text-xs text-muted-foreground">
-          <tr className="border-b border-border">
-            <th className="px-3 py-2 font-medium">Rank</th>
-            <th className="px-3 py-2 font-medium">Player</th>
-            <th className="px-3 py-2 font-medium">Pts</th>
-            <th className="px-3 py-2 font-medium">Games</th>
-            <th className="px-3 py-2 font-medium">Elims</th>
-            <th className="px-3 py-2 font-medium">Dealt</th>
-            <th className="px-3 py-2 font-medium">Taken</th>
-            <th className="px-3 py-2 font-medium">Ratio</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={`${row.rank}-${row.names}`}
-              className={row.you ? "bg-emerald-400/10" : "border-b border-border/70"}
-            >
-              <td className="px-3 py-2 tabular-nums">{row.rank.toLocaleString()}</td>
-              <td className="px-3 py-2">{row.names}</td>
-              <td className="px-3 py-2 tabular-nums">{row.points.toLocaleString()}</td>
-              <td className="px-3 py-2 tabular-nums">{row.games}</td>
-              <td className="px-3 py-2 tabular-nums">{row.elims.toLocaleString()}</td>
-              <td className="px-3 py-2 tabular-nums">{row.damageDealt.toLocaleString()}</td>
-              <td className="px-3 py-2 tabular-nums">{row.damageTaken.toLocaleString()}</td>
-              <td className="px-3 py-2 tabular-nums">{ratioText(row.damageRatio)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+function windowLabel(item: TournamentWindow): string {
+  const day = new Date(item.beginTime).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${day} · ${item.windowId}${item.qualSpots ? ` · top ${item.qualSpots.toLocaleString()}` : ""}`;
 }
 
 export function SessionBoard({ accountId }: { accountId: string | null }) {
@@ -74,7 +26,6 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
   const [events, setEvents] = useState<TournamentSummary[] | null>(null);
   const [eventId, setEventId] = useState<string>("");
   const [windowId, setWindowId] = useState<string>("");
-  const [points, setPoints] = useState("");
   const [appliedPoints, setAppliedPoints] = useState("");
   const [view, setView] = useState<SessionView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +50,6 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
         const picked = pickDefaultSession(body.tournaments, Date.now());
         setEventId(picked?.eventId ?? "");
         setWindowId(picked?.windowId ?? "");
-        setPoints("");
         setAppliedPoints("");
       })
       .catch((reason: unknown) => {
@@ -140,31 +90,44 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
     };
   }, [region, eventId, windowId, accountId, appliedPoints, refresh]);
 
-  const read = view?.read;
+  const busy = loadingList || loadingSession;
+  const empty = events !== null && events.length === 0;
 
   return (
-    <section className="grid gap-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+    <section className="grid gap-4" aria-labelledby="sessions-heading" aria-busy={busy}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <h2 id="sessions-heading" className="text-xl font-semibold tracking-tight">
+            Tournaments
+          </h2>
+          <p className="text-sm text-muted-foreground">Live qual line, cutoff history, and the board around you.</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy || !windowId}
+          onClick={() => setRefresh((value) => value + 1)}
+        >
+          <RefreshCwIcon data-icon="inline-start" className={cn(busy && "motion-safe:animate-spin")} />
+          Refresh
+        </Button>
+      </div>
+
+      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[8rem_minmax(0,2fr)_minmax(0,1.4fr)]">
         <div className="grid gap-2">
           <Label htmlFor="region">Region</Label>
-          <select
-            id="region"
-            className={fieldClass}
-            value={region}
-            onChange={(event) => setRegion(event.target.value as Region)}
-          >
+          <NativeSelect id="region" value={region} onChange={(change) => setRegion(change.target.value as Region)}>
             {REGIONS.map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div className="grid gap-2">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor="event">Tournament</Label>
-          <select
+          <NativeSelect
             id="event"
-            className={fieldClass}
             value={eventId}
             disabled={!events || events.length === 0}
             onChange={(change) => {
@@ -172,7 +135,6 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
               const picked = next ? pickDefaultSession([next], Date.now()) : null;
               setEventId(change.target.value);
               setWindowId(picked?.windowId ?? "");
-              setPoints("");
               setAppliedPoints("");
             }}
           >
@@ -181,157 +143,64 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
                 {item.title}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
-        <div className="grid gap-2">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor="window">Session</Label>
-          <select
+          <NativeSelect
             id="window"
-            className={fieldClass}
             value={windowId}
             disabled={!event}
             onChange={(change) => {
               setWindowId(change.target.value);
-              setPoints("");
               setAppliedPoints("");
             }}
           >
             {(event?.windows ?? []).map((item) => (
               <option key={item.windowId} value={item.windowId}>
-                {item.windowId}
-                {item.qualSpots ? ` · top ${item.qualSpots.toLocaleString()}` : ""}
+                {windowLabel(item)}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
-      {loadingList ? <p className="text-sm text-muted-foreground">Loading tournaments…</p> : null}
-      {loadingSession ? <p className="text-sm text-muted-foreground">Loading the leaderboard…</p> : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-      {read && view ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-            <div className="grid gap-1">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Session</p>
-              <h2 className="text-lg font-semibold tracking-tight">{view.title}</h2>
-              <p className="text-sm text-muted-foreground">{qualificationHeadline(read)}</p>
-            </div>
-            <Badge variant="outline">{view.windowOpen ? "Live" : "Final"}</Badge>
-          </div>
-          <div className="grid sm:grid-cols-3">
-            <div className="grid gap-1 border-b border-border px-4 py-4 sm:border-r sm:border-b-0">
-              <p className="text-xs text-muted-foreground">{read.pointsOff !== null && read.pointsOff > 0 ? "Points off" : "Qual"}</p>
-              <p className={`text-4xl font-semibold tabular-nums tracking-tight ${gapTone(read)}`}>{gapFigure(read)}</p>
-            </div>
-            <div className="grid gap-1 border-b border-border px-4 py-4 sm:border-r sm:border-b-0">
-              <p className="text-xs text-muted-foreground">Series estimate</p>
-              <p className="text-4xl font-semibold tabular-nums tracking-tight">
-                {read.seriesEstimate === null ? "—" : read.seriesEstimate.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {read.seriesSampleSize > 0
-                  ? `Average cutoff from ${read.seriesSampleSize} earlier window${read.seriesSampleSize === 1 ? "" : "s"} with the same spots.`
-                  : "No earlier window with this cutoff yet."}
-              </p>
-            </div>
-            <div className="grid gap-1 px-4 py-4">
-              <p className="text-xs text-muted-foreground">Pace</p>
-              <p className="text-4xl font-semibold tabular-nums tracking-tight">
-                {read.pace?.projectedYou == null ? "—" : read.pace.projectedYou.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {read.pace
-                  ? `If this points-per-game holds, the line finishes near ${read.pace.projectedLine.toLocaleString()} with ${read.pace.gamesLeft} games left. A pace guess, not Fortnite Tracker's number.`
-                  : "Pace shows while the window is open and the match cap isn't used up."}
-              </p>
-            </div>
-          </div>
-          {view.you ? (
-            <p className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
-              {view.you.names} · rank {view.you.rank.toLocaleString()} · damage ratio {ratioText(view.you.damageRatio)} (
-              {view.you.damageDealt.toLocaleString()} dealt / {view.you.damageTaken.toLocaleString()} taken). Ratio is
-              dealt divided by taken across scored games.
-            </p>
-          ) : null}
-          <form
-            className="flex flex-col gap-2 border-t border-border px-4 py-3 sm:flex-row sm:items-end"
-            onSubmit={(submit) => {
-              submit.preventDefault();
-              setAppliedPoints(points.trim());
-            }}
-          >
-            <div className="grid flex-1 gap-2">
-              <Label htmlFor="points">Your points</Label>
-              <Input
-                id="points"
-                inputMode="numeric"
-                value={points}
-                placeholder={view.you ? `${view.you.points.toLocaleString()} on the board` : "From the in-game scoreboard"}
-                onChange={(change) => setPoints(change.target.value.replace(/\D/g, "").slice(0, 6))}
-              />
-            </div>
-            <Button type="submit">Check the gap</Button>
-          </form>
-          {!view.you && accountId ? (
-            <p className="px-4 pb-3 text-xs text-muted-foreground">
-              Not in the top {view.searchedThroughRank.toLocaleString()} checked
-              {view.read.spots && view.searchedThroughRank < view.read.spots
-                ? ". The cutoff row is loaded, but ranks between those pages are not."
-                : "."}{" "}
-              Enter your points for the exact gap.
-            </p>
-          ) : null}
-          <ScoreTable rows={view.leaders} />
-          {view.bubble.length > 0 ? (
-            <>
-              <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">Around the cutoff</p>
-              <ScoreTable rows={view.bubble} />
-            </>
-          ) : null}
-          {view.you && view.you.matches.length > 0 ? (
-            <div className="border-t border-border">
-              <p className="px-4 py-2 text-xs text-muted-foreground">Your games</p>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead className="text-xs text-muted-foreground">
-                    <tr className="border-b border-border">
-                      <th className="px-3 py-2 font-medium">Game</th>
-                      <th className="px-3 py-2 font-medium">Place</th>
-                      <th className="px-3 py-2 font-medium">Elims</th>
-                      <th className="px-3 py-2 font-medium">Dealt</th>
-                      <th className="px-3 py-2 font-medium">Taken</th>
-                      <th className="px-3 py-2 font-medium">Ratio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {view.you.matches.map((game, index) => (
-                      <tr key={`${view.windowId}-${index}`} className="border-b border-border/70">
-                        <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                        <td className="px-3 py-2 tabular-nums">{game.placement}</td>
-                        <td className="px-3 py-2 tabular-nums">{game.elims}</td>
-                        <td className="px-3 py-2 tabular-nums">{game.damageDealt.toLocaleString()}</td>
-                        <td className="px-3 py-2 tabular-nums">{game.damageTaken.toLocaleString()}</td>
-                        <td className="px-3 py-2 tabular-nums">{ratioText(game.damageRatio)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-          <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-            <p>
-              Leaderboard from the Osirion public API. Not affiliated with Epic or Osirion.
-              {view.updatedAt ? ` Updated ${new Date(view.updatedAt).toLocaleTimeString()}.` : ""}
-            </p>
-            <Button type="button" variant="outline" size="sm" onClick={() => setRefresh((value) => value + 1)}>
-              Refresh
-            </Button>
-          </div>
-        </div>
+      {error ? (
+        <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
+
+      {empty ? (
+        <p className="rounded-2xl border border-dashed border-border px-5 py-10 text-center text-sm text-muted-foreground">
+          No tournaments listed for {region} right now.
+        </p>
+      ) : view ? (
+        <div className={cn("transition-opacity", loadingSession && "opacity-60")}>
+          <SessionPanel
+            key={`${view.title}:${view.windowId}`}
+            view={view}
+            accountLinked={accountId !== null}
+            onPoints={setAppliedPoints}
+          />
+        </div>
+      ) : busy ? (
+        <SessionSkeleton />
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        Leaderboard from the Osirion public API. Not affiliated with Epic or Osirion.
+        {view?.updatedAt ? ` Updated ${new Date(view.updatedAt).toLocaleTimeString()}.` : ""}
+      </p>
     </section>
+  );
+}
+
+function SessionSkeleton() {
+  return (
+    <div className="grid gap-4" aria-hidden>
+      <div className="h-64 animate-pulse rounded-2xl bg-card" />
+      <div className="h-96 animate-pulse rounded-2xl bg-card" />
+    </div>
   );
 }
