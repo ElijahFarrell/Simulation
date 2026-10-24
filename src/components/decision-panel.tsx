@@ -53,7 +53,8 @@ export function DecisionPanel({
   onLock: () => void;
 }) {
   return (
-    <Card size="sm">
+    // overflow-visible so the footer can stick; the card's default overflow-hidden would trap it.
+    <Card size="sm" className="overflow-visible">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Your call</CardTitle>
       </CardHeader>
@@ -84,7 +85,8 @@ export function DecisionPanel({
         </p>
         {hint ? <p className="text-sm leading-5 text-muted-foreground">{hint}</p> : null}
       </CardContent>
-      <CardFooter>
+      {/* The column scrolls on desktop, and the quiz answer and hint push Go below the fold, so keep it pinned. */}
+      <CardFooter className="sticky bottom-0 z-10 bg-card shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.5)]">
         <Button type="button" size="lg" className="h-10 w-full text-base" disabled={!canLock || busy} onClick={onLock}>
           {busy ? "Moving…" : "Go"}
           {busy ? null : <Kbd className="ml-1 border-white/25 bg-white/15 text-primary-foreground">Enter</Kbd>}

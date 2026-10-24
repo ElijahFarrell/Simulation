@@ -232,7 +232,7 @@ export function RotationLab() {
             </p>
           </div>
         </div>
-        <div className="grid content-start gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+        <div className="grid auto-rows-max content-start gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           {scenario ? (
             <div className="grid gap-1 rounded-xl border border-brand/25 bg-brand/5 p-3">
               <p className="eyebrow text-brand">Lesson · {scenario.title}</p>
