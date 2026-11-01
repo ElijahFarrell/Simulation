@@ -6,10 +6,10 @@ import type { GameSettings, PullType } from "./types";
  */
 export const MAP_SIZE = 1000;
 export const INITIAL_RADIUS = 500;
-/** Trios is 33 teams of 3. Solos is 100 players of 1. */
+/** Crossbones Isle lobbies are 80 players. Trios is 27 teams of 3. Solos is 80 players of 1. */
 export const GAME_MODES = {
-  trios: { squadSize: 3, teamCount: 33, minTeams: 16, maxTeams: 33 },
-  solos: { squadSize: 1, teamCount: 100, minTeams: 40, maxTeams: 100 },
+  trios: { squadSize: 3, teamCount: 27, minTeams: 13, maxTeams: 27 },
+  solos: { squadSize: 1, teamCount: 80, minTeams: 32, maxTeams: 80 },
 } as const;
 export const ROTATE_SPEED = 5.5;
 /** Seconds spent looting each stop after the drop. Travel uses ROTATE_SPEED. */
