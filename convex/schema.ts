@@ -14,6 +14,8 @@ export default defineSchema({
     name: v.optional(v.string()),
     epicAccountId: v.optional(v.string()),
     epicDisplayName: v.optional(v.string()),
+    epicPreferredLanguage: v.optional(v.string()),
+    epicVerified: v.optional(v.boolean()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_epic", ["epicAccountId"]),

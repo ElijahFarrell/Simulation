@@ -1,7 +1,9 @@
-import { v } from "convex/values";
-import { mutation, query, type QueryCtx } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 
-export async function currentUser(ctx: QueryCtx) {
+type Reader = QueryCtx | MutationCtx;
+
+export async function currentUser(ctx: Reader) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   return await ctx.db
@@ -33,7 +35,7 @@ export const store = mutation({
 
 const EPIC_ID = /^[0-9a-f]{32}$/i;
 
-/** Saves the Epic account chosen from a display-name lookup. Public leaderboard data only. */
+/** Saves the Epic account chosen from a display-name lookup. Unverified: anyone can claim a public name. */
 export const linkEpic = mutation({
   args: {
     epicAccountId: v.string(),
@@ -51,7 +53,61 @@ export const linkEpic = mutation({
     await ctx.db.patch(user._id, {
       epicAccountId: args.epicAccountId.toLowerCase(),
       epicDisplayName,
+      epicPreferredLanguage: undefined,
+      epicVerified: undefined,
     });
     return null;
+  },
+});
+
+/** Saves the Epic account proven by OAuth. Only another verified owner blocks it, never a name-lookup claim. */
+export const applyEpicLink = internalMutation({
+  args: {
+    accountId: v.string(),
+    displayName: v.string(),
+    preferredLanguage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError({ code: "unauthorized" });
+    const epicAccountId = args.accountId.toLowerCase();
+    const claims = await ctx.db
+      .query("users")
+      .withIndex("by_epic", (q) => q.eq("epicAccountId", epicAccountId))
+      .collect();
+    const existing = await currentUser(ctx);
+    if (claims.some((claim) => claim.epicVerified && claim._id !== existing?._id)) {
+      throw new ConvexError({ code: "taken" });
+    }
+
+    const link = {
+      epicAccountId,
+      epicDisplayName: args.displayName,
+      epicPreferredLanguage: args.preferredLanguage,
+      epicVerified: true,
+    };
+    if (existing) {
+      await ctx.db.patch(existing._id, link);
+      return existing._id;
+    }
+    return await ctx.db.insert("users", {
+      tokenIdentifier: identity.tokenIdentifier,
+      name: identity.name ?? identity.nickname ?? identity.email,
+      ...link,
+    });
+  },
+});
+
+export const unlinkEpic = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await currentUser(ctx);
+    if (!user) throw new Error("Not signed in");
+    await ctx.db.patch(user._id, {
+      epicAccountId: undefined,
+      epicDisplayName: undefined,
+      epicPreferredLanguage: undefined,
+      epicVerified: undefined,
+    });
   },
 });

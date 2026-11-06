@@ -10,14 +10,32 @@ import { Label } from "@/components/ui/label";
 
 type EpicMatch = { accountId: string; displayName: string };
 
+const OAUTH_STATUS_COPY: Record<string, string> = {
+  linked: "Epic account verified.",
+  denied: "Epic login was cancelled.",
+  failed: "Epic didn't return an account. Try linking again.",
+  taken: "That Epic account is already verified by someone else.",
+  "not-configured": "Epic login isn't configured on this server yet.",
+};
+
 export function EpicLink({
   epicAccountId,
   epicDisplayName,
+  epicPreferredLanguage,
+  epicVerified,
+  oauthEnabled,
+  status,
 }: {
   epicAccountId?: string;
   epicDisplayName?: string;
+  epicPreferredLanguage?: string;
+  epicVerified?: boolean;
+  oauthEnabled: boolean;
+  status?: string;
 }) {
   const linkEpic = useMutation(api.users.linkEpic);
+  const unlinkEpic = useMutation(api.users.unlinkEpic);
+  const notice = status ? OAUTH_STATUS_COPY[status] : undefined;
   const [name, setName] = useState("");
   const [choices, setChoices] = useState<EpicMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -63,15 +81,31 @@ export function EpicLink({
         <div className="grid min-w-0 flex-1 gap-0.5">
           <p className="eyebrow flex items-center gap-1.5">
             <CheckIcon className="size-3 text-success" aria-hidden />
-            Epic account linked
+            {epicVerified ? "Epic account verified" : "Epic account linked"}
           </p>
-          <p className="truncate text-lg font-semibold">{epicDisplayName}</p>
+          <p className="truncate text-lg font-semibold">
+            {epicDisplayName}
+            {epicPreferredLanguage ? ` · ${epicPreferredLanguage}` : ""}
+          </p>
           {epicAccountId ? (
             <p className="truncate font-mono text-[0.7rem] text-muted-foreground">{epicAccountId}</p>
           ) : null}
+          {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
           Change
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void unlinkEpic().finally(() => setBusy(false));
+          }}
+        >
+          Unlink
         </Button>
       </section>
     );
@@ -137,6 +171,12 @@ export function EpicLink({
           </div>
         </div>
       ) : null}
+      {oauthEnabled ? (
+        <Button asChild variant="outline" size="sm" className="justify-self-start">
+          <a href="/api/epic/link">Verify with Epic login instead</a>
+        </Button>
+      ) : null}
+      {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </section>
   );

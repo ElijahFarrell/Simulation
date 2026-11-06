@@ -8,7 +8,7 @@ import { EpicLink } from "@/components/stats/epic-link";
 import { ReplayDrop } from "@/components/stats/replay-drop";
 import { SessionBoard } from "@/components/stats/session-board";
 
-export function StatsHome() {
+export function StatsHome({ epicLinkingEnabled, epicStatus }: { epicLinkingEnabled: boolean; epicStatus?: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storeUser = useMutation(api.users.store);
   const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
@@ -30,7 +30,14 @@ export function StatsHome() {
             </p>
           </div>
           {isAuthenticated && me !== undefined ? (
-            <EpicLink epicAccountId={me?.epicAccountId} epicDisplayName={me?.epicDisplayName} />
+            <EpicLink
+              epicAccountId={me?.epicAccountId}
+              epicDisplayName={me?.epicDisplayName}
+              epicPreferredLanguage={me?.epicPreferredLanguage}
+              epicVerified={me?.epicVerified}
+              oauthEnabled={epicLinkingEnabled}
+              status={epicStatus}
+            />
           ) : null}
         </section>
 

@@ -32,7 +32,13 @@ npx clerk@latest init     # or copy keys from the Clerk dashboard into .env.loca
 npx convex env set CLERK_JWT_ISSUER_DOMAIN https://<your-app>.clerk.accounts.dev
 ```
 
-In Clerk, add a JWT template named `convex` with `"aud": "convex"` (or turn on the Convex integration). Sign in with Epic is a custom OIDC provider in Clerk using `https://api.epicgames.dev/epic/oauth/v2/.well-known/openid-configuration`.
+In Clerk, add a JWT template named `convex` with `"aud": "convex"` (or turn on the Convex integration).
+
+Epic is not a sign-in method. Clerk is the account, and Epic is linked afterwards, which is how Osirion does it: authorization code, `basic_profile` only. The app stores the Epic account id, display name, and preferred language, and drops the access token when the link finishes.
+
+1. In the Epic Developer Portal, create an Epic Account Services client whose only permission is basic profile. Add redirect URL `{origin}/api/epic/callback` (for local dev, `http://localhost:4317/api/epic/callback`).
+2. Set `EPIC_CLIENT_ID` in the Next.js environment.
+3. Set the same `EPIC_CLIENT_ID` and `EPIC_CLIENT_SECRET` in Convex: `npx convex env set EPIC_CLIENT_ID ...` and `npx convex env set EPIC_CLIENT_SECRET ...`. Set `EPIC_DEPLOYMENT_ID` too if that client's token request requires a deployment.
 
 ## How a rep works
 
