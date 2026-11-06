@@ -67,7 +67,7 @@ function resolvePlayer(
   if (decision.engagement === "tag") {
     return tagTarget(player, target, contacts, rng, fought);
   }
-  return commitFight(player, target, contacts, rng, fought, 1, "win", "loss");
+  return commitFight(player, target, contacts, rng, fought, 1, "win");
 }
 
 function tryAvoid(
@@ -85,10 +85,9 @@ function tryAvoid(
       thirdPartied: false,
     };
   }
-  const forced = commitFight(player, target, [target], rng, fought, 0.72, "forced", "loss");
+  const forced = commitFight(player, target, [target], rng, fought, 0.72, "forced");
   return {
     ...forced,
-    outcome: forced.outcome === "win" ? "forced" : "loss",
     events: [`You tried to stay away, but ${label(target)} caught you`, ...forced.events],
   };
 }
@@ -131,7 +130,6 @@ function commitFight(
   fought: Set<string>,
   playerMult: number,
   winOutcome: FightOutcome,
-  lossOutcome: FightOutcome,
 ): CombatSummary {
   const result = duel(player, target, rng, playerMult);
   fought.add(player.id);
@@ -154,7 +152,7 @@ function commitFight(
   if (thirdPartied && third) events.push(`${label(third)} jumped into your fight (third party)`);
   return {
     events,
-    outcome: won ? winOutcome : lossOutcome,
+    outcome: won ? winOutcome : "loss",
     thirdPartied,
   };
 }

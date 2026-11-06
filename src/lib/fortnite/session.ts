@@ -1,3 +1,4 @@
+import type { EventStatus } from "./catalog";
 import { readQualification, type QualRead } from "./qualify";
 import type { ParsedEntry, TournamentSummary, TournamentWindow } from "./parse";
 
@@ -28,7 +29,7 @@ export type SessionView = {
   beginTime: string;
   endTime: string;
   matchCap: number;
-  windowOpen: boolean;
+  status: EventStatus;
   updatedAt: string | null;
   searchedThroughRank: number;
   read: QualRead;
@@ -71,7 +72,7 @@ function row(entry: ParsedEntry, you: boolean): BoardRow {
 export function buildSessionView(input: {
   title: string;
   window: TournamentWindow;
-  windowOpen: boolean;
+  status: EventStatus;
   entries: ParsedEntry[];
   accountId: string | null;
   typedPoints: number | null;
@@ -99,7 +100,7 @@ export function buildSessionView(input: {
     yourGames: found?.summary.games ?? 0,
     lineGames: input.lineGames,
     matchCap: input.window.matchCap,
-    windowOpen: input.windowOpen,
+    windowOpen: input.status === "live",
     confirmedOutside: found === null && scannedTheField && typed === null,
   });
 
@@ -118,7 +119,7 @@ export function buildSessionView(input: {
     beginTime: input.window.beginTime,
     endTime: input.window.endTime,
     matchCap: input.window.matchCap,
-    windowOpen: input.windowOpen,
+    status: input.status,
     updatedAt: input.updatedAt,
     searchedThroughRank: input.searchedThroughRank,
     read,

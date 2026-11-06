@@ -57,7 +57,7 @@ describe("buildSessionView", () => {
     const view = buildSessionView({
       title: "FNCS",
       window,
-      windowOpen: false,
+      status: "past",
       entries: [entry(1, 500, "a".repeat(32)), entry(1000, 189, "b".repeat(32)), entry(16, 400, "c".repeat(32))],
       accountId: "c".repeat(32),
       typedPoints: null,

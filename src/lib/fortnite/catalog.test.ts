@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCatalog, relativeTime, type CatalogFilter } from "./catalog";
+import { buildCatalog, relativeTime, windowStatus, type CatalogFilter } from "./catalog";
 import { eventDisplay, stripRegionPrefix } from "./event-display";
 import type { TournamentSummary, TournamentWindow } from "./parse";
 
@@ -76,5 +76,15 @@ describe("relativeTime", () => {
     expect(relativeTime(NOW + 7 * 3_600_000, NOW)).toBe("in 7 hrs");
     expect(relativeTime(NOW + 3 * 86_400_000, NOW)).toBe("in 3 days");
     expect(relativeTime(NOW - 20 * 60_000, NOW)).toBe("20 min ago");
+  });
+});
+
+describe("windowStatus", () => {
+  const window = { beginTime: "2026-10-12T19:00:00Z", endTime: "2026-10-12T21:00:00Z" };
+
+  it("does not call a window live before it begins", () => {
+    expect(windowStatus(window, Date.parse("2026-10-12T18:59:00Z"))).toBe("upcoming");
+    expect(windowStatus(window, Date.parse("2026-10-12T19:00:00Z"))).toBe("live");
+    expect(windowStatus(window, Date.parse("2026-10-12T21:00:00Z"))).toBe("past");
   });
 });

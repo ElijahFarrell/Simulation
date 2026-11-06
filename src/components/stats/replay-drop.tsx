@@ -40,7 +40,8 @@ export function ReplayDrop() {
       if (typeof body !== "object" || body === null || !("storageId" in body) || typeof body.storageId !== "string") {
         throw new Error("Upload didn't finish.");
       }
-      await register({ storageId: body.storageId as Id<"_storage">, fileName: file.name });
+      const result = await register({ storageId: body.storageId as Id<"_storage">, fileName: file.name });
+      if (result.rejected) setError(result.rejected);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Upload failed.");
     } finally {

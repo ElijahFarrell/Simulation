@@ -32,3 +32,20 @@ describe("drop plan", () => {
     expect(skipped.game?.teams.find((team) => team.isPlayer)?.pos).toEqual(before);
   });
 });
+
+describe("locked calls", () => {
+  it("ignores timing and engagement while the zone plays out", () => {
+    const started = labReducer(initialLabState, { type: "start", seed: 7, scenarioId: null });
+    const deciding = labReducer(labReducer(started, { type: "drop-skip" }), { type: "pick", point: { x: 500, y: 500 } });
+    const locked = labReducer(deciding, { type: "lock" });
+    expect(locked.animating).toBe(true);
+    expect(labReducer(locked, { type: "timing", timing: "late" }).timing).toBe(locked.timing);
+    expect(labReducer(locked, { type: "engagement", engagement: "fight" }).engagement).toBe(locked.engagement);
+  });
+
+  it("still takes them while deciding", () => {
+    const started = labReducer(initialLabState, { type: "start", seed: 7, scenarioId: null });
+    const deciding = labReducer(started, { type: "drop-skip" });
+    expect(labReducer(deciding, { type: "timing", timing: "late" }).timing).toBe("late");
+  });
+});

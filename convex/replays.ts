@@ -43,23 +43,25 @@ export const generateUploadUrl = mutation({
   },
 });
 
+/** Rejections return instead of throw, because a throw would roll back deleting the upload. */
 export const register = mutation({
   args: {
     storageId: v.id("_storage"),
     fileName: v.string(),
   },
-  returns: v.id("replays"),
+  returns: v.union(v.object({ replayId: v.id("replays") }), v.object({ rejected: v.string() })),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const fileName = args.fileName.split(/[/\\]/).pop()?.trim() ?? "";
     if (!fileName.toLowerCase().endsWith(".replay") || fileName.length > 180) {
-      throw new Error("Choose a .replay file");
+      await ctx.storage.delete(args.storageId);
+      return { rejected: "Choose a .replay file." };
     }
     const metadata = await ctx.db.system.get("_storage", args.storageId);
     if (!metadata) throw new Error("Upload did not finish");
     if (metadata.size <= 0 || metadata.size > MAX_REPLAY_BYTES) {
       await ctx.storage.delete(args.storageId);
-      throw new Error("Replay must be under 120 MB");
+      return { rejected: "Replay must be under 120 MB." };
     }
     const existing = await ctx.db
       .query("replays")
@@ -67,14 +69,15 @@ export const register = mutation({
       .first();
     if (existing) {
       if (existing.storageId !== args.storageId) await ctx.storage.delete(args.storageId);
-      return existing._id;
+      return { replayId: existing._id };
     }
-    return await ctx.db.insert("replays", {
+    const replayId = await ctx.db.insert("replays", {
       userId: user._id,
       storageId: args.storageId,
       fileName,
       sizeBytes: metadata.size,
       status: "uploaded",
     });
+    return { replayId };
   },
 });

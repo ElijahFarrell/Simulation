@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { windowStatus } from "@/lib/fortnite/catalog";
 import { LAN_REGION } from "@/lib/fortnite/event-display";
 import type { TournamentSummary } from "@/lib/fortnite/parse";
 import { cn } from "@/lib/utils";
@@ -63,8 +64,9 @@ export function EventDetail({
           </div>
           <div role="radiogroup" aria-label="Session" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
             {windows.map((window, index) => {
-              const open = Date.parse(window.beginTime) <= now && now < Date.parse(window.endTime);
-              const upcoming = Date.parse(window.beginTime) > now;
+              const status = windowStatus(window, now);
+              const open = status === "live";
+              const upcoming = status === "upcoming";
               const active = window.windowId === windowId;
               return (
                 <button

@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isWin } from "@/engine/game";
 import type { GameState } from "@/engine/types";
 import { averageScore, worstHabit } from "@/lib/review";
 import { scoreTone, TONE_FILL, TONE_TEXT } from "@/components/lab/score-tone";
@@ -32,7 +33,7 @@ export function SessionSummary({
 }) {
   const average = Math.round(averageScore(game.history));
   const habit = worstHabit(game.history);
-  const won = game.status === "won" && game.placement === 1;
+  const won = isWin(game);
   const place = game.placement ?? game.teams.length;
 
   return (

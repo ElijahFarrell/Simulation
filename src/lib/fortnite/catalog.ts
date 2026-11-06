@@ -17,13 +17,18 @@ export type CatalogFilter = {
   mode: "all" | "build" | "zero-build";
 };
 
+export function windowStatus(window: { beginTime: string; endTime: string }, now: number): EventStatus {
+  if (now < Date.parse(window.beginTime)) return "upcoming";
+  return now < Date.parse(window.endTime) ? "live" : "past";
+}
+
 export function eventStatus(event: TournamentSummary, now: number): CatalogEvent {
-  const spans = event.windows.map((window) => ({ begin: Date.parse(window.beginTime), end: Date.parse(window.endTime) }));
-  const open = spans.filter((span) => span.begin <= now && now < span.end);
-  if (open.length > 0) return { event, status: "live", at: Math.min(...open.map((span) => span.end)) };
-  const next = spans.filter((span) => span.begin > now);
-  if (next.length > 0) return { event, status: "upcoming", at: Math.min(...next.map((span) => span.begin)) };
-  return { event, status: "past", at: Math.max(...spans.map((span) => span.end)) };
+  const windows = (status: EventStatus) => event.windows.filter((window) => windowStatus(window, now) === status);
+  const live = windows("live");
+  if (live.length > 0) return { event, status: "live", at: Math.min(...live.map((window) => Date.parse(window.endTime))) };
+  const next = windows("upcoming");
+  if (next.length > 0) return { event, status: "upcoming", at: Math.min(...next.map((window) => Date.parse(window.beginTime))) };
+  return { event, status: "past", at: Math.max(...event.windows.map((window) => Date.parse(window.endTime))) };
 }
 
 /** A region query also returns neighbours (NAC lists NAW cups). Keep the region's own cups and LAN events. */

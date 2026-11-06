@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PhaseResult } from "@/engine/types";
+import type { GameState, PhaseResult } from "@/engine/types";
 import { EMPTY_STATS, averageScore, mergeStats, worstHabit } from "./review";
 
 function phase(ruleId: string, total: number): PhaseResult {
@@ -32,7 +32,7 @@ describe("review", () => {
 
   it("tracks wins and best average", () => {
     const history = [phase("storm-heavy", 80), phase("storm-heavy", 60)];
-    const next = mergeStats(EMPTY_STATS, {
+    const game = {
       seed: 1,
       phaseIndex: 1,
       zones: [],
@@ -43,8 +43,10 @@ describe("review", () => {
       placement: 1,
       settings: { mode: "trios", teamCount: 30, fighterWeight: 0.2, dropStyle: "opens" },
       landMask: null,
-    });
+    } satisfies GameState;
+    const next = mergeStats(EMPTY_STATS, game);
     expect(next.wins).toBe(1);
+    expect(mergeStats(EMPTY_STATS, { ...game, placement: 3 }).wins).toBe(0);
     expect(next.games).toBe(1);
     expect(next.bestAverage).toBe(averageScore(history));
     expect(next.badRules["storm-heavy"]).toBe(2);

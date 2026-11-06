@@ -52,13 +52,15 @@ export function SessionPanel({
             <p className="eyebrow">{windowRange(view.beginTime, view.endTime)}</p>
             <h2 className="text-lg font-semibold tracking-tight text-balance">{qualificationHeadline(read)}</h2>
           </div>
-          {view.windowOpen ? (
+          {view.status === "live" ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive">
               <span className="size-1.5 rounded-full bg-destructive motion-safe:animate-pulse" />
               Live
             </span>
           ) : (
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">Final</span>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              {view.status === "upcoming" ? "Upcoming" : "Final"}
+            </span>
           )}
         </div>
         {hasLine ? (

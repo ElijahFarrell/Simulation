@@ -54,6 +54,6 @@ export function isGameOver(state: GameState): boolean {
   return state.status === "dead" || state.status === "won";
 }
 
-export function finishKey(state: GameState): string {
-  return `${state.seed}:${state.history.length}:${state.status}`;
+export function isWin(state: GameState): boolean {
+  return state.status === "won" && state.placement === 1;
 }

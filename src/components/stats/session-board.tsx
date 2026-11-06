@@ -29,10 +29,12 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
   const [pick, setPick] = useState<Pick | null>(null);
   const [appliedPoints, setAppliedPoints] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [listRetry, setListRetry] = useState(0);
 
   const list = useJson<{ tournaments: TournamentSummary[] }>(
     `/api/fortnite/tournaments?region=${region}`,
     "Couldn't load tournaments.",
+    listRetry,
   );
   const events = list.loading || list.error ? null : (list.data?.tournaments ?? null);
   const defaultPick = useMemo(
@@ -98,8 +100,12 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
             type="button"
             variant="outline"
             size="lg"
-            disabled={busy || !windowId}
+            disabled={busy || (events !== null && !windowId)}
             onClick={() => {
+              if (events === null) {
+                setListRetry((value) => value + 1);
+                return;
+              }
               setPick(selection);
               setNow(Date.now());
               setRefresh((value) => value + 1);

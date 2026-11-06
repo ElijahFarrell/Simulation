@@ -1,4 +1,5 @@
 import { RULE_LESSONS } from "@/engine/feedback";
+import { isWin } from "@/engine/game";
 import type { GameState, PhaseResult } from "@/engine/types";
 
 export type SavedStats = {
@@ -36,7 +37,7 @@ export function lifetimeHabit(stats: SavedStats): Habit | null {
 export function mergeStats(stats: SavedStats, game: GameState): SavedStats {
   return {
     games: stats.games + 1,
-    wins: stats.wins + (game.status === "won" ? 1 : 0),
+    wins: stats.wins + (isWin(game) ? 1 : 0),
     bestAverage: Math.max(stats.bestAverage, averageScore(game.history)),
     badRules: badRuleCounts(game.history, stats.badRules),
   };

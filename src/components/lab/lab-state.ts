@@ -111,9 +111,9 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         route: [],
       };
     case "timing":
-      return { ...state, timing: action.timing };
+      return callOpen(state) ? { ...state, timing: action.timing } : state;
     case "engagement":
-      return { ...state, engagement: action.engagement };
+      return callOpen(state) ? { ...state, engagement: action.engagement } : state;
     case "lock":
       return lockCall(state);
     case "anim-done":
@@ -154,8 +154,12 @@ function addStop(state: LabState, picked: Vec): LabState {
   return { ...state, route: [...state.route, point] };
 }
 
+function callOpen(state: LabState): boolean {
+  return state.game?.status === "deciding" && !state.planning && !state.animating;
+}
+
 function pickDestination(state: LabState, point: Vec): LabState {
-  if (!state.game || state.game.status !== "deciding" || state.animating) return state;
+  if (!state.game || !callOpen(state)) return state;
   return { ...state, destination: stayOnLand(state.game.landMask, point) };
 }
 
@@ -198,9 +202,7 @@ function applyLand(state: LabState, land: LandMask): LabState {
 }
 
 function lockCall(state: LabState): LabState {
-  if (!state.game || state.planning || state.game.status !== "deciding" || !state.destination || state.animating) {
-    return state;
-  }
+  if (!state.game || !callOpen(state) || !state.destination) return state;
   const animFrom = state.game.teams.map((team) => ({ ...team }));
   const game = resolveDecision(state.game, {
     destination: state.destination,

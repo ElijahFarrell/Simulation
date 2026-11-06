@@ -18,11 +18,13 @@ const CALLS = [
 ];
 
 export function StartScreen({
+  ready,
   settings,
   stats,
   onSettings,
   onStart,
 }: {
+  ready: boolean;
   settings: LabSettings;
   stats: SavedStats;
   onSettings: (settings: LabSettings) => void;
@@ -45,6 +47,7 @@ export function StartScreen({
           </div>
           <LobbySetup
             className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
+            ready={ready}
             settings={settings}
             onSettings={onSettings}
             onStart={(seed) => onStart(seed, null)}
@@ -84,7 +87,8 @@ export function StartScreen({
               <button
                 key={scenario.id}
                 type="button"
-                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors outline-none hover:border-brand/40 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+                disabled={!ready}
+                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors outline-none disabled:pointer-events-none disabled:opacity-60 hover:border-brand/40 hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-ring/50"
                 onClick={() => onStart(scenario.seed, scenario.id)}
               >
                 <span className="font-mono text-xs text-brand">Lesson {index + 1}</span>

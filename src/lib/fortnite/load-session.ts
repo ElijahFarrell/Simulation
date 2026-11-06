@@ -1,3 +1,4 @@
+import { windowStatus } from "./catalog";
 import { FortniteDataError, leaderboardPage, listTournaments, pagesInParallel } from "./osirion";
 import type { Region } from "./parse";
 import { buildSessionView, type SessionView } from "./session";
@@ -82,7 +83,7 @@ export async function loadSession(input: {
   return buildSessionView({
     title: event.title,
     window,
-    windowOpen: input.now < Date.parse(window.endTime),
+    status: windowStatus(window, input.now),
     entries,
     accountId: input.accountId,
     typedPoints: input.typedPoints,

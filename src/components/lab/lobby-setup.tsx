@@ -17,11 +17,13 @@ import { cn } from "@/lib/utils";
 
 export function LobbySetup({
   className,
+  ready,
   settings,
   onSettings,
   onStart,
 }: {
   className?: string;
+  ready: boolean;
   settings: LabSettings;
   onSettings: (settings: LabSettings) => void;
   onStart: (seed: number) => void;
@@ -113,9 +115,15 @@ export function LobbySetup({
         </div>
       </CardContent>
       <CardFooter>
-        <Button type="button" size="lg" className="h-11 w-full text-base" onClick={() => onStart(parseSeed(seedText))}>
+        <Button
+          type="button"
+          size="lg"
+          className="h-11 w-full text-base"
+          disabled={!ready}
+          onClick={() => onStart(parseSeed(seedText))}
+        >
           <PlayIcon data-icon="inline-start" className="fill-current" />
-          Start game
+          {ready ? "Start game" : "Loading map…"}
         </Button>
       </CardFooter>
     </Card>

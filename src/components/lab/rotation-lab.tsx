@@ -23,7 +23,7 @@ import { ZoneTrack } from "@/components/lab/zone-track";
 import { GAME_MODES, ZONE_TABLE } from "@/engine/constants";
 import { coachHint } from "@/engine/coach";
 import { describeCall, destinationSide } from "@/engine/feedback";
-import { finishKey, getPhaseView, isGameOver } from "@/engine/game";
+import { getPhaseView, isGameOver } from "@/engine/game";
 import { positioningGrid } from "@/engine/analysis";
 import { randomSeed } from "@/engine/rng";
 import { scenarioById } from "@/engine/scenarios";
@@ -36,11 +36,11 @@ import { EMPTY_STATS, mergeStats, readStats, subscribeStats, writeStats } from "
 export function RotationLab() {
   const [state, dispatch] = useReducer(labReducer, initialLabState);
   const stats = useSyncExternalStore(subscribeStats, readStats, () => EMPTY_STATS);
-  const [dismissedSummary, setDismissedSummary] = useState<string | null>(null);
+  const [dismissedRun, setDismissedRun] = useState<number | null>(null);
   const [wholeGame, setWholeGame] = useState(false);
   const onPlaces = useCallback((places: Place[]) => dispatch({ type: "places", places }), []);
   const onLand = useCallback((land: LandMask) => dispatch({ type: "land", land }), []);
-  const island = useIsland(onPlaces, onLand);
+  const { island, ready } = useIsland(onPlaces, onLand);
   const coachChat = useMemo(
     () =>
       new Chat<UIMessage>({
@@ -49,23 +49,21 @@ export function RotationLab() {
       }),
     [state.runId],
   );
-  const recorded = useRef<string | null>(null);
+  const recordedRun = useRef<number | null>(null);
 
   const game = state.game;
   useEffect(() => {
-    if (!game || state.animating) return;
-    if (!isGameOver(game)) return;
-    const key = finishKey(game);
-    if (recorded.current === key) return;
-    recorded.current = key;
+    if (!game || state.animating || !isGameOver(game) || recordedRun.current === state.runId) return;
+    recordedRun.current = state.runId;
     writeStats(mergeStats(readStats(), game));
-  }, [game, state.animating]);
+  }, [game, state.animating, state.runId]);
 
   const finishAnimation = useCallback(() => dispatch({ type: "anim-done" }), []);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (isTyping(event.target) || state.screen !== "play" || !state.game) return;
+      if (event.key === "Enter" && onPlainControl(event.target)) return;
       if (state.planning) {
         if (event.key === "Enter") dispatch({ type: "drop-lock" });
         if (event.key === "Backspace") dispatch({ type: "drop-undo" });
@@ -97,6 +95,7 @@ export function RotationLab() {
   if (state.screen === "menu" || !game || !view) {
     return (
       <StartScreen
+        ready={ready}
         settings={state.settings}
         stats={stats}
         onSettings={(settings) => dispatch({ type: "settings", settings })}
@@ -112,10 +111,7 @@ export function RotationLab() {
     : "Tap the map to pick where you go.";
   const showFeedback = !state.animating && last && game.status !== "deciding";
   const scenario = scenarioById(state.scenarioId);
-  const summaryKey = !state.animating && isGameOver(game) ? finishKey(game) : null;
-  const closeSummary = () => {
-    if (summaryKey) setDismissedSummary(summaryKey);
-  };
+  const closeSummary = () => setDismissedRun(state.runId);
   const newGame = () => dispatch({ type: "start", seed: randomSeed(), scenarioId: null });
 
   const focusZone = wholeGame ? null : view.zone.index;
@@ -191,7 +187,7 @@ export function RotationLab() {
           <StatePanel
             view={view}
             mode={game.settings.mode}
-            revealPull={!state.settings.hints || state.pullGuess !== null}
+            revealPull={!state.settings.hints || state.pullGuess !== null || game.status !== "deciding"}
           />
           {state.planning ? (
             <DropPlan
@@ -251,7 +247,7 @@ export function RotationLab() {
       </div>
       <SessionSummary
         game={game}
-        open={summaryKey !== null && summaryKey !== dismissedSummary}
+        open={!state.animating && isGameOver(game) && dismissedRun !== state.runId}
         onOpenChange={(open) => {
           if (!open) closeSummary();
         }}
@@ -279,6 +275,11 @@ export function RotationLab() {
 
 function scrollToCoach() {
   document.getElementById("coach")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/** The call's radio choices don't use Enter, so it still means Go while one has focus. */
+function onPlainControl(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('button:not([role="radio"]), a') !== null;
 }
 
 function isTyping(target: EventTarget | null): boolean {
