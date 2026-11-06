@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chooseAiDestination } from "../ai-behavior";
 import { dist } from "../geometry";
-import { createLobby } from "../lobby";
+import { createLobby, normalizeSettings } from "../lobby";
 import { createRng } from "../rng";
 import type { LandMask, Team, ZonePhase } from "../types";
 import { generateZones } from "../zones";
@@ -36,7 +36,7 @@ function team(partial: Partial<Team> & Pick<Team, "archetype" | "pos">): Team {
 describe("lobby", () => {
   it("creates one player and the requested number of teams", () => {
     const rng = createRng(4);
-    const teams = createLobby(rng, zone(), { teamCount: 25, fighterWeight: 0.2 });
+    const teams = createLobby(rng, zone(), normalizeSettings({ teamCount: 25, fighterWeight: 0.2 }));
     expect(teams).toHaveLength(25);
     expect(teams.filter((entry) => entry.isPlayer)).toHaveLength(1);
     expect(teams[0]?.id).toBe("you");
@@ -56,7 +56,7 @@ describe("lobby", () => {
     const teams = createLobby(
       createRng(4),
       zone(),
-      { teamCount: 33, fighterWeight: 0.2, dropStyle: "stacked" },
+      normalizeSettings({ teamCount: 33, fighterWeight: 0.2, dropStyle: "stacked" }),
       mask,
       places,
     );
@@ -66,7 +66,7 @@ describe("lobby", () => {
   });
 
   it("builds a solos lobby as 80 players of 1", () => {
-    const teams = createLobby(createRng(8), zone(), { mode: "solos" });
+    const teams = createLobby(createRng(8), zone(), normalizeSettings({ mode: "solos" }));
     expect(teams).toHaveLength(80);
     expect(teams.every((entry) => entry.squadSize === 1 && entry.alive === 1 && entry.hp === 100)).toBe(true);
   });

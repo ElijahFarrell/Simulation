@@ -1,8 +1,11 @@
+import type { GAME_MODES, ScorePart } from "./constants";
+
 export type Vec = { x: number; y: number };
 
 export type Circle = { center: Vec; radius: number };
 
-export type PullType = "normal" | "deep" | "half";
+export const PULL_TYPES = ["normal", "deep", "half"] as const;
+export type PullType = (typeof PULL_TYPES)[number];
 
 export type ZonePhase = {
   index: number;
@@ -32,9 +35,11 @@ export type Team = {
   squadSize: number;
 };
 
-export type Timing = "early" | "standard" | "late";
+export const TIMINGS = ["early", "standard", "late"] as const;
+export type Timing = (typeof TIMINGS)[number];
 
-export type Engagement = "avoid" | "tag" | "fight";
+export const ENGAGEMENTS = ["avoid", "tag", "fight"] as const;
+export type Engagement = (typeof ENGAGEMENTS)[number];
 
 export type Decision = {
   destination: Vec;
@@ -42,7 +47,8 @@ export type Decision = {
   engagement: Engagement;
 };
 
-export type SectorLabel = "dead" | "normal" | "stacked";
+export const SECTOR_LABELS = ["dead", "normal", "stacked"] as const;
+export type SectorLabel = (typeof SECTOR_LABELS)[number];
 
 export type SectorInfo = {
   index: number;
@@ -50,16 +56,10 @@ export type SectorInfo = {
   label: SectorLabel;
 };
 
-export type ScoreBreakdown = {
-  storm: number;
-  contact: number;
-  exposure: number;
-  surge: number;
-  positioning: number;
-  total: number;
-};
+export type ScoreBreakdown = Record<ScorePart | "total", number>;
 
-export type FeedbackTone = "good" | "warn" | "bad";
+export const FEEDBACK_TONES = ["good", "warn", "bad"] as const;
+export type FeedbackTone = (typeof FEEDBACK_TONES)[number];
 
 export type FeedbackLine = {
   tone: FeedbackTone;
@@ -85,7 +85,8 @@ export type PhaseResult = {
   sectors: SectorInfo[];
 };
 
-export type GameStatus = "deciding" | "resolved" | "dead" | "won";
+export const GAME_STATUSES = ["deciding", "resolved", "dead", "won"] as const;
+export type GameStatus = (typeof GAME_STATUSES)[number];
 
 /** Coarse land/water sample. 1 means land. Rows run from the top of the image. */
 export type LandMask = {
@@ -93,14 +94,13 @@ export type LandMask = {
   cells: Uint8Array;
 };
 
-export type GameMode = "trios" | "solos";
+export type GameMode = keyof typeof GAME_MODES;
 
 /** Opens scatter teams. Stacked piles most of them onto a few drops. */
 export type DropStyle = "opens" | "stacked";
 
 export type GameSettings = {
   mode: GameMode;
-  squadSize: number;
   teamCount: number;
   fighterWeight: number;
   dropStyle: DropStyle;

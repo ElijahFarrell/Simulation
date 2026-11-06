@@ -10,6 +10,9 @@ export type EventDisplay = {
   ranked: boolean;
 };
 
+/** How Epic marks an in-person event in place of a region. */
+export const LAN_REGION = "ONSITE";
+
 const IMAGE_HOST = "https://cdn2.unrealengine.com/";
 
 function image(value: unknown): string | null {

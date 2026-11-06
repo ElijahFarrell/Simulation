@@ -1,11 +1,14 @@
 export type Rng = {
   next: () => number;
   range: (min: number, max: number) => number;
-  int: (min: number, max: number) => number;
   pick: <T>(items: readonly T[]) => T;
   chance: (probability: number) => boolean;
   getState: () => number;
 };
+
+export function randomSeed(): number {
+  return Math.floor(Math.random() * 1_000_000_000);
+}
 
 /** mulberry32. Saving getState() and passing it to createRng resumes the stream. */
 export function createRng(seed: number): Rng {
@@ -22,7 +25,6 @@ export function createRng(seed: number): Rng {
   return {
     next,
     range: (min, max) => min + next() * (max - min),
-    int: (min, max) => min + Math.floor(next() * (max - min + 1)),
     pick: <T>(items: readonly T[]): T => {
       if (items.length === 0) {
         throw new Error("Cannot pick from an empty list");

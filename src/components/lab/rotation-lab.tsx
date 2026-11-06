@@ -4,44 +4,43 @@ import { Chat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { ArrowLeftIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import { CoachPanel } from "@/components/coach-dialog";
-import { DecisionPanel } from "@/components/decision-panel";
-import { DropPlan } from "@/components/drop-plan";
-import { FeedbackCard } from "@/components/feedback-card";
-import { initialLabState, labReducer, type Overlays } from "@/components/lab-state";
-import { MapCanvas } from "@/components/map-canvas";
-import { MapErrorBoundary } from "@/components/map-error-boundary";
-import { OverlayToggles } from "@/components/overlay-toggles";
-import { SessionSummary } from "@/components/session-summary";
-import { StartScreen } from "@/components/start-screen";
-import { StatePanel } from "@/components/state-panel";
+import { choiceForKey, ENGAGEMENT_CHOICES, TIMING_CHOICES } from "@/components/lab/choices";
+import { useIsland } from "@/components/lab/use-island";
+import { CoachPanel } from "@/components/lab/coach-panel";
+import { DecisionPanel } from "@/components/lab/decision-panel";
+import { DropPlan } from "@/components/lab/drop-plan";
+import { FeedbackCard } from "@/components/lab/feedback-card";
+import { initialLabState, labReducer, type Overlays } from "@/components/lab/lab-state";
+import { MapCanvas } from "@/components/lab/map-canvas";
+import { MapErrorBoundary } from "@/components/lab/map-error-boundary";
+import { OverlayToggles } from "@/components/lab/overlay-toggles";
+import { SessionSummary } from "@/components/lab/session-summary";
+import { StartScreen } from "@/components/lab/start-screen";
+import { StatePanel } from "@/components/lab/state-panel";
 import { BrandMark } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { ZoneTrack } from "@/components/zone-track";
-import { SECTOR_COUNT, ZONE_TABLE } from "@/engine/constants";
+import { ZoneTrack } from "@/components/lab/zone-track";
+import { GAME_MODES, ZONE_TABLE } from "@/engine/constants";
 import { coachHint } from "@/engine/coach";
-import { describeCall, heldCenter } from "@/engine/feedback";
-import { getPhaseView } from "@/engine/game";
-import { sectorIndex } from "@/engine/geometry";
+import { describeCall, destinationSide } from "@/engine/feedback";
+import { finishKey, getPhaseView, isGameOver } from "@/engine/game";
 import { positioningGrid } from "@/engine/analysis";
-import { stayOnLand } from "@/engine/land";
+import { randomSeed } from "@/engine/rng";
 import { scenarioById } from "@/engine/scenarios";
-import type { Engagement, LandMask, Timing } from "@/engine/types";
+import type { LandMask } from "@/engine/types";
 import { COACH_API } from "@/lib/coach/constants";
 import { buildCoachContext } from "@/lib/coach/context";
-import { landMaskFromImage } from "@/lib/island/read-land";
 import type { Place } from "@/lib/island/project";
 import { EMPTY_STATS, mergeStats, readStats, subscribeStats, writeStats } from "@/lib/review";
-
-type IslandView = { imageUrl: string | null; places: Place[] };
 
 export function RotationLab() {
   const [state, dispatch] = useReducer(labReducer, initialLabState);
   const stats = useSyncExternalStore(subscribeStats, readStats, () => EMPTY_STATS);
   const [dismissedSummary, setDismissedSummary] = useState<string | null>(null);
   const [wholeGame, setWholeGame] = useState(false);
-  const [island, setIsland] = useState<IslandView>({ imageUrl: null, places: [] });
-  const [land, setLand] = useState<LandMask | null>(null);
+  const onPlaces = useCallback((places: Place[]) => dispatch({ type: "places", places }), []);
+  const onLand = useCallback((land: LandMask) => dispatch({ type: "land", land }), []);
+  const island = useIsland(onPlaces, onLand);
   const coachChat = useMemo(
     () =>
       new Chat<UIMessage>({
@@ -55,46 +54,14 @@ export function RotationLab() {
   const game = state.game;
   useEffect(() => {
     if (!game || state.animating) return;
-    if (game.status !== "dead" && game.status !== "won") return;
-    const key = `${game.seed}:${game.history.length}:${game.status}`;
+    if (!isGameOver(game)) return;
+    const key = finishKey(game);
     if (recorded.current === key) return;
     recorded.current = key;
     writeStats(mergeStats(readStats(), game));
   }, [game, state.animating]);
 
   const finishAnimation = useCallback(() => dispatch({ type: "anim-done" }), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/island")
-      .then((response) => response.json())
-      .then((payload: unknown) => {
-        const next = readIsland(payload);
-        if (cancelled || !next) return;
-        setIsland(next);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!island.imageUrl) return;
-    let cancelled = false;
-    const image = new Image();
-    image.onload = () => {
-      if (!cancelled) setLand(landMaskFromImage(image));
-    };
-    image.src = island.imageUrl;
-    return () => {
-      cancelled = true;
-    };
-  }, [island.imageUrl]);
-
-  useEffect(() => {
-    if (land) dispatch({ type: "land", land });
-  }, [land]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -104,12 +71,12 @@ export function RotationLab() {
         if (event.key === "Backspace") dispatch({ type: "drop-undo" });
         return;
       }
-      const timing = timingKey(event.key);
+      const timing = choiceForKey(TIMING_CHOICES, event.key);
       if (timing) {
         dispatch({ type: "timing", timing });
         return;
       }
-      const engagement = engagementKey(event.key);
+      const engagement = choiceForKey(ENGAGEMENT_CHOICES, event.key);
       if (engagement) {
         dispatch({ type: "engagement", engagement });
         return;
@@ -133,32 +100,26 @@ export function RotationLab() {
         settings={state.settings}
         stats={stats}
         onSettings={(settings) => dispatch({ type: "settings", settings })}
-        onStart={(seed, scenarioId) =>
-          dispatch({ type: "start", seed, scenarioId, land, places: island.places })
-        }
+        onStart={(seed, scenarioId) => dispatch({ type: "start", seed, scenarioId })}
       />
     );
   }
 
   const last = game.history[game.history.length - 1] ?? null;
   const sectors = game.status === "deciding" || !last ? view.sectors : last.sectors;
-  const centerHold = state.destination ? heldCenter(draft(state), view.zone.to) : false;
-  const sector =
-    state.destination && !centerHold
-      ? (sectors[sectorIndex(view.zone.to.center, state.destination, SECTOR_COUNT)] ?? null)
-      : null;
   const call = state.destination
-    ? describeCall(draft(state), sector, centerHold)
+    ? describeCall(state, destinationSide(state.destination, view.zone.to, sectors))
     : "Tap the map to pick where you go.";
   const showFeedback = !state.animating && last && game.status !== "deciding";
   const scenario = scenarioById(state.scenarioId);
-  const summaryKey =
-    !state.animating && (game.status === "dead" || game.status === "won")
-      ? `${game.seed}:${game.history.length}:${game.status}`
-      : null;
+  const summaryKey = !state.animating && isGameOver(game) ? finishKey(game) : null;
+  const closeSummary = () => {
+    if (summaryKey) setDismissedSummary(summaryKey);
+  };
+  const newGame = () => dispatch({ type: "start", seed: randomSeed(), scenarioId: null });
 
   const focusZone = wholeGame ? null : view.zone.index;
-  const others = game.settings.squadSize === 1 ? "players" : "trios";
+  const { others } = GAME_MODES[game.settings.mode];
 
   return (
     <div className="mx-auto flex min-h-dvh w-full flex-col gap-3 px-3 py-3 sm:px-4 lg:h-dvh lg:max-h-dvh lg:overflow-hidden lg:px-5 lg:py-4">
@@ -199,22 +160,10 @@ export function RotationLab() {
                 disabled={game.status !== "deciding" || state.animating}
                 animateFrom={state.animating ? state.animFrom : null}
                 playerTiming={state.timing}
-                imageUrl={island.imageUrl}
+                island={island}
                 route={state.planning ? state.route : null}
                 hidePlayer={state.planning}
-                onPick={(point) => {
-                  if (state.planning) {
-                    dispatch({
-                      type: "drop-add",
-                      point: stayOnLand(game.landMask, point, view.zone.from),
-                    });
-                    return;
-                  }
-                  dispatch({
-                    type: "destination",
-                    destination: stayOnLand(game.landMask, point),
-                  });
-                }}
+                onPick={(point) => dispatch({ type: "pick", point })}
                 onAnimationDone={finishAnimation}
               />
             </MapErrorBoundary>
@@ -241,13 +190,13 @@ export function RotationLab() {
           ) : null}
           <StatePanel
             view={view}
-            teamsAlive={view.teamsAlive}
+            mode={game.settings.mode}
             revealPull={!state.settings.hints || state.pullGuess !== null}
           />
           {state.planning ? (
             <DropPlan
               route={state.route}
-              places={island.places}
+              places={state.places}
               waitSec={view.zone.waitSec}
               onUndo={() => dispatch({ type: "drop-undo" })}
               onClear={() => dispatch({ type: "drop-clear" })}
@@ -282,23 +231,12 @@ export function RotationLab() {
               onLock={() => dispatch({ type: "lock" })}
             />
           )}
-          {game.status === "dead" || game.status === "won" ? (
+          {isGameOver(game) ? (
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={() => dispatch({ type: "restart" })}>
                 Same seed
               </Button>
-              <Button
-                type="button"
-                onClick={() =>
-                  dispatch({
-                    type: "start",
-                    seed: Math.floor(Math.random() * 1_000_000_000),
-                    scenarioId: null,
-                    land,
-                    places: island.places,
-                  })
-                }
-              >
+              <Button type="button" onClick={newGame}>
                 New game
               </Button>
             </div>
@@ -306,7 +244,7 @@ export function RotationLab() {
         </div>
         <CoachPanel
           chat={coachChat}
-          context={buildCoachContext(game, focusZone, island.places)}
+          context={buildCoachContext(game, focusZone, state.places)}
           wholeGame={wholeGame}
           onWholeGame={setWholeGame}
         />
@@ -315,28 +253,22 @@ export function RotationLab() {
         game={game}
         open={summaryKey !== null && summaryKey !== dismissedSummary}
         onOpenChange={(open) => {
-          if (!open && summaryKey) setDismissedSummary(summaryKey);
+          if (!open) closeSummary();
         }}
         onReplay={() => {
-          if (summaryKey) setDismissedSummary(summaryKey);
+          closeSummary();
           dispatch({ type: "restart" });
         }}
         onNewGame={() => {
-          if (summaryKey) setDismissedSummary(summaryKey);
-          dispatch({
-            type: "start",
-            seed: Math.floor(Math.random() * 1_000_000_000),
-            scenarioId: null,
-            land,
-            places: island.places,
-          });
+          closeSummary();
+          newGame();
         }}
         onMenu={() => {
-          if (summaryKey) setDismissedSummary(summaryKey);
+          closeSummary();
           dispatch({ type: "menu" });
         }}
         onAsk={() => {
-          if (summaryKey) setDismissedSummary(summaryKey);
+          closeSummary();
           setWholeGame(true);
           scrollToCoach();
         }}
@@ -347,45 +279,6 @@ export function RotationLab() {
 
 function scrollToCoach() {
   document.getElementById("coach")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function readIsland(value: unknown): IslandView | null {
-  if (!value || typeof value !== "object") return null;
-  const record = value as { imageUrl?: unknown; places?: unknown };
-  if (record.imageUrl !== null && typeof record.imageUrl !== "string") return null;
-  if (!Array.isArray(record.places)) return null;
-  const places: Place[] = [];
-  for (const entry of record.places) {
-    if (!entry || typeof entry !== "object") return null;
-    const place = entry as { name?: unknown; x?: unknown; y?: unknown };
-    if (typeof place.name !== "string" || typeof place.x !== "number" || typeof place.y !== "number") {
-      return null;
-    }
-    places.push({ name: place.name, x: place.x, y: place.y });
-  }
-  return { imageUrl: record.imageUrl ?? null, places };
-}
-
-function draft(state: { destination: { x: number; y: number } | null; timing: Timing; engagement: Engagement }) {
-  return {
-    destination: state.destination ?? { x: 0, y: 0 },
-    timing: state.timing,
-    engagement: state.engagement,
-  };
-}
-
-function timingKey(key: string): Timing | null {
-  if (key === "1") return "early";
-  if (key === "2") return "standard";
-  if (key === "3") return "late";
-  return null;
-}
-
-function engagementKey(key: string): Engagement | null {
-  if (key === "q" || key === "Q") return "avoid";
-  if (key === "w" || key === "W") return "tag";
-  if (key === "e" || key === "E") return "fight";
-  return null;
 }
 
 function isTyping(target: EventTarget | null): boolean {

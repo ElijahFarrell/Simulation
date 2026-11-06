@@ -61,11 +61,10 @@ export async function loadSession(input: {
   const seriesLinePoints: number[] = [];
   for (const previous of earlier) {
     try {
-      const sizeHint = pageSize;
       const previousPage = await leaderboardPage(
         previous.leaderboardEventId,
         previous.leaderboardEventWindowId,
-        pageForRank(previous.qualSpots ?? 1, sizeHint),
+        pageForRank(previous.qualSpots ?? 1, pageSize),
       );
       const previousLine = previousPage.entries.find((entry) => entry.rank === previous.qualSpots);
       if (previousLine) seriesLinePoints.push(previousLine.points);

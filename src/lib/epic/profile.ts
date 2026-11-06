@@ -1,12 +1,20 @@
+import { asRecord, nonEmptyString } from "../json";
+
 export type EpicProfile = {
   accountId: string;
   displayName: string;
   preferredLanguage?: string;
 };
 
+export const EPIC_NAME_MAX = 32;
+
 const ACCOUNT_ID = /^[0-9a-f]{32}$/i;
-const DISPLAY_NAME = /^.{1,32}$/u;
+const DISPLAY_NAME = new RegExp(`^.{1,${EPIC_NAME_MAX}}$`, "u");
 const LANGUAGE = /^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{2,8})?$/;
+
+export function isEpicAccountId(value: string): boolean {
+  return ACCOUNT_ID.test(value);
+}
 
 export function epicProfileFrom(token: unknown, userInfo: unknown): EpicProfile | null {
   const tokenRecord = asRecord(token);
@@ -36,7 +44,7 @@ export function accessTokenFrom(token: unknown): string | null {
 }
 
 function normalizeAccountId(value: string | null): string | null {
-  if (!value || !ACCOUNT_ID.test(value)) return null;
+  if (!value || !isEpicAccountId(value)) return null;
   return value.toLowerCase();
 }
 
@@ -68,12 +76,6 @@ function decodeBase64Url(value: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
 function stringField(record: Record<string, unknown> | null, key: string): string | null {
-  const value = record?.[key];
-  return typeof value === "string" && value.length > 0 ? value : null;
+  return nonEmptyString(record?.[key]);
 }

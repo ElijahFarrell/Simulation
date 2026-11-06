@@ -4,20 +4,21 @@ import { CloudLightningIcon, HeartPulseIcon, LayersIcon, ShieldIcon, UsersIcon, 
 import type { ComponentType, ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PULL_COPY, ZONE_TABLE } from "@/engine/constants";
-import type { PhaseView } from "@/engine/types";
+import { GAME_MODES, PULL_COPY, ZONE_TABLE } from "@/engine/constants";
+import type { GameMode, PhaseView } from "@/engine/types";
 
 export function StatePanel({
   view,
-  teamsAlive,
+  mode,
   revealPull,
 }: {
   view: PhaseView;
-  teamsAlive: number;
+  mode: GameMode;
   revealPull: boolean;
 }) {
   const { player, zone } = view;
   const pull = PULL_COPY[zone.pull];
+  const { countLabel, squadLabel } = GAME_MODES[mode];
   return (
     <Card size="sm">
       <CardHeader>
@@ -31,10 +32,10 @@ export function StatePanel({
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
         <dl className="grid grid-cols-2 gap-2">
-          <Stat icon={UsersIcon} label={player.squadSize === 1 ? "Alive" : "Teams"} value={teamsAlive} />
+          <Stat icon={UsersIcon} label={countLabel} value={view.teamsAlive} />
           <Stat
             icon={ShieldIcon}
-            label={player.squadSize === 1 ? "You" : "Trio"}
+            label={squadLabel}
             value={<AlivePips alive={player.alive} squadSize={player.squadSize} />}
           />
           <Stat icon={LayersIcon} label="Mats" value={player.mats} />

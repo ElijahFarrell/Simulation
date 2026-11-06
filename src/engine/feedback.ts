@@ -1,5 +1,5 @@
-import { sectorName } from "./constants";
-import { angleDiff, angleFromNorthCW, dist } from "./geometry";
+import { SECTOR_COUNT, sectorName } from "./constants";
+import { angleDiff, angleFromNorthCW, dist, sectorIndex } from "./geometry";
 import type {
   Circle,
   Decision,
@@ -15,10 +15,8 @@ export type FeedbackContext = {
   decision: Decision;
   stormDamage: number;
   exposure: number;
-  surgeActive: boolean;
   surgeHit: boolean;
-  destinationSector: SectorInfo | null;
-  heldCenter: boolean;
+  side: DestinationSide;
   endPos: Vec;
   nextCenter: Vec | null;
   mats: number;
@@ -28,6 +26,7 @@ export type FeedbackContext = {
 
 type Rule = (ctx: FeedbackContext) => FeedbackLine | null;
 
+const PULL_AWAY_RADIANS = 2.1;
 const TONE_RANK = { bad: 0, warn: 1, good: 2 } as const;
 
 export const RULE_LESSONS: Record<string, string> = {
@@ -154,9 +153,9 @@ function exposureHigh(ctx: FeedbackContext): FeedbackLine | null {
 
 function deadSideLost(ctx: FeedbackContext): FeedbackLine | null {
   const delta = edgePullDelta(ctx);
-  if (delta === null || delta < 2.1) return null;
-  if (ctx.destinationSector?.label === "stacked") return null;
-  const side = ctx.destinationSector ? sectorName(ctx.destinationSector.index) : "edge";
+  if (delta === null || delta < PULL_AWAY_RADIANS) return null;
+  if (ctx.side.sector?.label === "stacked") return null;
+  const side = ctx.side.sector ? sectorName(ctx.side.sector.index) : "edge";
   return {
     tone: "warn",
     ruleId: "dead-side-lost",
@@ -165,7 +164,7 @@ function deadSideLost(ctx: FeedbackContext): FeedbackLine | null {
 }
 
 function stackedAvoid(ctx: FeedbackContext): FeedbackLine | null {
-  if (ctx.destinationSector?.label !== "stacked" || ctx.decision.engagement !== "avoid") return null;
+  if (ctx.side.sector?.label !== "stacked" || ctx.decision.engagement !== "avoid") return null;
   return {
     tone: "warn",
     ruleId: "stacked-avoid",
@@ -184,7 +183,7 @@ function lowMats(ctx: FeedbackContext): FeedbackLine | null {
 }
 
 function surgePassive(ctx: FeedbackContext): FeedbackLine | null {
-  if (!ctx.surgeActive || ctx.surgeHit || ctx.decision.engagement !== "avoid") return null;
+  if (!ctx.zone.surgeActive || ctx.surgeHit || ctx.decision.engagement !== "avoid") return null;
   return {
     tone: "warn",
     ruleId: "surge-passive",
@@ -193,7 +192,7 @@ function surgePassive(ctx: FeedbackContext): FeedbackLine | null {
 }
 
 function centerExposed(ctx: FeedbackContext): FeedbackLine | null {
-  if (!ctx.heldCenter || ctx.exposure < 4) return null;
+  if (!ctx.side.heldCenter || ctx.exposure < 4) return null;
   return {
     tone: "warn",
     ruleId: "center-exposed",
@@ -239,7 +238,7 @@ function deepEarly(ctx: FeedbackContext): FeedbackLine | null {
 }
 
 function surgeTag(ctx: FeedbackContext): FeedbackLine | null {
-  if (!ctx.surgeActive || ctx.surgeHit || ctx.outcome !== "tag") return null;
+  if (!ctx.zone.surgeActive || ctx.surgeHit || ctx.outcome !== "tag") return null;
   return {
     tone: "good",
     ruleId: "surge-tag",
@@ -283,10 +282,11 @@ function latePaid(ctx: FeedbackContext): FeedbackLine | null {
 }
 
 function deadSideQuiet(ctx: FeedbackContext): FeedbackLine | null {
-  if (ctx.destinationSector?.label !== "dead") return null;
+  if (ctx.side.sector?.label !== "dead") return null;
   if (ctx.decision.engagement !== "avoid") return null;
   if (ctx.outcome !== "none" && ctx.outcome !== "escaped") return null;
-  if (edgePullDelta(ctx) !== null && (edgePullDelta(ctx) ?? 0) >= 2.1) return null;
+  const delta = edgePullDelta(ctx);
+  if (delta !== null && delta >= PULL_AWAY_RADIANS) return null;
   return {
     tone: "good",
     ruleId: "dead-side-quiet",
@@ -303,13 +303,16 @@ function edgePullDelta(ctx: FeedbackContext): number | null {
   return angleDiff(held, pull);
 }
 
-export function describeCall(decision: Decision, sector: SectorInfo | null, heldCenter: boolean): string {
-  const when = { early: "Go right away", standard: "Wait a bit, then go", late: "Loot first, then go" }[decision.timing];
-  const how = { avoid: "stay away from teams", tag: "hit a team and leave", fight: "go all in on a fight" }[decision.engagement];
-  const where = heldCenter ? "to the middle" : sector ? `to the ${sectorName(sector.index)} side` : "to your pin";
-  return `${when} ${where}, ${how}.`;
+export type DestinationSide = { heldCenter: boolean; sector: SectorInfo | null };
+
+export function destinationSide(destination: Vec, zone: Circle, sectors: readonly SectorInfo[]): DestinationSide {
+  if (dist(destination, zone.center) < zone.radius * 0.32) return { heldCenter: true, sector: null };
+  return { heldCenter: false, sector: sectors[sectorIndex(zone.center, destination, SECTOR_COUNT)] ?? null };
 }
 
-export function heldCenter(decision: Decision, zone: Circle): boolean {
-  return dist(decision.destination, zone.center) < zone.radius * 0.32;
+export function describeCall(call: Pick<Decision, "timing" | "engagement">, side: DestinationSide): string {
+  const when = { early: "Go right away", standard: "Wait a bit, then go", late: "Loot first, then go" }[call.timing];
+  const how = { avoid: "stay away from teams", tag: "hit a team and leave", fight: "go all in on a fight" }[call.engagement];
+  const where = side.heldCenter ? "to the middle" : side.sector ? `to the ${sectorName(side.sector.index)} side` : "to your pin";
+  return `${when} ${where}, ${how}.`;
 }

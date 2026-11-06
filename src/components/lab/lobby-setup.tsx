@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Segmented, SegmentedItem } from "@/components/ui/segmented";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import type { LabSettings } from "@/components/lab-state";
+import type { LabSettings } from "@/components/lab/lab-state";
 import { GAME_MODES } from "@/engine/constants";
+import { randomSeed } from "@/engine/rng";
 import type { DropStyle, GameMode } from "@/engine/types";
 import { cn } from "@/lib/utils";
 
@@ -172,7 +173,7 @@ function lobbyCopy(style: DropStyle): string {
 }
 
 function parseSeed(seedText: string): number {
-  if (seedText.trim() === "") return Math.floor(Math.random() * 1_000_000_000);
+  if (seedText.trim() === "") return randomSeed();
   const parsed = Number(seedText);
   if (!Number.isFinite(parsed)) return 1;
   return Math.floor(parsed);

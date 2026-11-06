@@ -3,14 +3,17 @@
 import { api } from "@convex/_generated/api";
 import { useMutation } from "convex/react";
 import { CheckIcon, Link2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { EpicResult } from "@/lib/epic/authorize";
+import { EPIC_NAME_MAX } from "@/lib/epic/profile";
 
 type EpicMatch = { accountId: string; displayName: string };
 
-const OAUTH_STATUS_COPY: Record<string, string> = {
+const OAUTH_STATUS_COPY: Record<EpicResult, string> = {
   linked: "Epic account verified.",
   denied: "Epic login was cancelled.",
   failed: "Epic didn't return an account. Try linking again.",
@@ -35,7 +38,8 @@ export function EpicLink({
 }) {
   const linkEpic = useMutation(api.users.linkEpic);
   const unlinkEpic = useMutation(api.users.unlinkEpic);
-  const notice = status ? OAUTH_STATUS_COPY[status] : undefined;
+  const router = useRouter();
+  const notice = status && status in OAUTH_STATUS_COPY ? OAUTH_STATUS_COPY[status as EpicResult] : undefined;
   const [name, setName] = useState("");
   const [choices, setChoices] = useState<EpicMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +51,7 @@ export function EpicLink({
     setChoices([]);
     setName("");
     setEditing(false);
+    router.replace("/stats");
   }
 
   async function lookup(event: FormEvent) {
@@ -102,11 +107,16 @@ export function EpicLink({
           disabled={busy}
           onClick={() => {
             setBusy(true);
-            void unlinkEpic().finally(() => setBusy(false));
+            setError(null);
+            void unlinkEpic()
+              .then(() => router.replace("/stats"))
+              .catch(() => setError("Couldn't unlink that Epic account."))
+              .finally(() => setBusy(false));
           }}
         >
           Unlink
         </Button>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </section>
     );
   }
@@ -127,7 +137,7 @@ export function EpicLink({
             id="epic-name"
             value={name}
             autoComplete="off"
-            maxLength={32}
+            maxLength={EPIC_NAME_MAX}
             placeholder="Display name"
             onChange={(event) => setName(event.target.value)}
           />

@@ -39,7 +39,6 @@ export type SessionView = {
 
 const LEADER_COUNT = 15;
 
-/** Prefer the session that most recently started. Future windows wait until nothing has started. */
 export function pickDefaultSession(
   tournaments: TournamentSummary[],
   now: number,
@@ -101,18 +100,17 @@ export function buildSessionView(input: {
     lineGames: input.lineGames,
     matchCap: input.window.matchCap,
     windowOpen: input.windowOpen,
-    confirmedOutside: found === null && scannedTheField && !usingTyped && typed === null,
+    confirmedOutside: found === null && scannedTheField && typed === null,
   });
 
-  const youIds = new Set(found ? [found.teamId] : []);
-  const leaders = byRank.filter((entry) => entry.rank <= LEADER_COUNT).map((entry) => row(entry, youIds.has(entry.teamId)));
+  const leaders = byRank.filter((entry) => entry.rank <= LEADER_COUNT).map((entry) => row(entry, entry.teamId === found?.teamId));
   const spots = input.window.qualSpots;
   const bubble =
     spots === null
       ? []
       : byRank
           .filter((entry) => entry.rank >= spots - 2 && entry.rank <= spots + 2 && entry.rank > LEADER_COUNT)
-          .map((entry) => row(entry, youIds.has(entry.teamId)));
+          .map((entry) => row(entry, entry.teamId === found?.teamId));
 
   return {
     title: input.title,

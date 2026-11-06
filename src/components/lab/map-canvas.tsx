@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { aiTiming } from "@/engine/ai-behavior";
+import { teamTiming } from "@/engine/ai-behavior";
 import type { HeatCell } from "@/engine/analysis";
 import { MAP_SIZE } from "@/engine/constants";
 import { clampToMap } from "@/engine/geometry";
 import { circleAt, departDelay, positionAt } from "@/engine/movement";
 import type { Circle, SectorInfo, Team, Timing, Vec, ZonePhase } from "@/engine/types";
-import { drawMap } from "@/lib/canvas-draw";
+import { drawMap } from "@/components/lab/canvas-draw";
 
 type MapCanvasProps = {
   zone: ZonePhase;
@@ -18,105 +18,31 @@ type MapCanvasProps = {
   heatmap: HeatCell[] | null;
   showDensity: boolean;
   showPull: boolean;
-  disabled: boolean;
   animateFrom: Team[] | null;
   playerTiming: Timing;
-  imageUrl: string | null;
   route: Vec[] | null;
   hidePlayer: boolean;
+  island: HTMLImageElement | null;
+  disabled: boolean;
   onPick: (point: Vec) => void;
   onAnimationDone: () => void;
 };
 
-export function MapCanvas({
-  zone,
-  teams,
-  destination,
-  sectors,
-  pull,
-  heatmap,
-  showDensity,
-  showPull,
-  disabled,
-  animateFrom,
-  playerTiming,
-  imageUrl,
-  route,
-  hidePlayer,
-  onPick,
-  onAnimationDone,
-}: MapCanvasProps) {
+export function MapCanvas({ disabled, onPick, onAnimationDone, ...scene }: MapCanvasProps) {
+  const { animateFrom, destination, route, zone } = scene;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const doneRef = useRef(onAnimationDone);
   const kickRef = useRef<() => void>(() => {});
-  const islandRef = useRef<HTMLImageElement | null>(null);
-  const sceneRef = useRef({
-    zone,
-    teams,
-    destination,
-    sectors,
-    pull,
-    heatmap,
-    showDensity,
-    showPull,
-    animateFrom,
-    playerTiming,
-    route,
-    hidePlayer,
-  });
+  const sceneRef = useRef(scene);
 
   useEffect(() => {
     doneRef.current = onAnimationDone;
   }, [onAnimationDone]);
 
   useEffect(() => {
-    sceneRef.current = {
-      zone,
-      teams,
-      destination,
-      sectors,
-      pull,
-      heatmap,
-      showDensity,
-      showPull,
-      animateFrom,
-      playerTiming,
-      route,
-      hidePlayer,
-    };
-  }, [
-    animateFrom,
-    destination,
-    heatmap,
-    hidePlayer,
-    playerTiming,
-    pull,
-    route,
-    sectors,
-    showDensity,
-    showPull,
-    teams,
-    zone,
-  ]);
-
-  useEffect(() => {
-    if (!imageUrl) {
-      islandRef.current = null;
-      kickRef.current();
-      return;
-    }
-    const image = new Image();
-    let cancelled = false;
-    image.onload = () => {
-      if (cancelled) return;
-      islandRef.current = image;
-      kickRef.current();
-    };
-    image.src = imageUrl;
-    return () => {
-      cancelled = true;
-    };
-  }, [imageUrl]);
+    sceneRef.current = scene;
+    kickRef.current();
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,8 +55,7 @@ export function MapCanvas({
     const paint = (now: number) => {
       const size = canvas.clientWidth;
       const scene = sceneRef.current;
-      const player = scene.teams.find((team) => team.isPlayer);
-      if (size <= 0 || !player) return;
+      if (size <= 0) return;
       const totalSec = scene.zone.waitSec + scene.zone.shrinkSec;
       const duration = Math.min(12_000, Math.max(4_500, totalSec * 70));
       const raw = !scene.animateFrom || reduce ? 1 : Math.min(1, (now - started) / duration);
@@ -151,14 +76,13 @@ export function MapCanvas({
       drawMap(ctx, size, {
         zone: scene.zone,
         teams: shown,
-        player: shown.find((team) => team.isPlayer) ?? player,
         destination: scene.destination,
         sectors: scene.sectors,
         pull: scene.pull,
         heatmap: scene.heatmap,
         showDensity: scene.showDensity,
         showPull: scene.showPull,
-        island: islandRef.current,
+        island: scene.island,
         storm: playing ? circleAt(scene.zone, timeSec) : null,
         clock: playing ? { timeSec } : null,
         route: scene.route,
@@ -188,10 +112,6 @@ export function MapCanvas({
       observer.disconnect();
     };
   }, [animateFrom]);
-
-  useEffect(() => {
-    kickRef.current();
-  }, [destination, heatmap, hidePlayer, playerTiming, pull, route, sectors, showDensity, showPull, teams, zone]);
 
   return (
     <canvas
@@ -229,10 +149,9 @@ function teamsAt(
   return teams.map((team, index) => {
     const start = starts[index];
     if (!start || team.eliminated) return team;
-    const timing = team.isPlayer ? playerTiming : aiTiming(team.archetype);
     return {
       ...team,
-      pos: positionAt(start.pos, team.pos, departDelay(timing, zone), timeSec),
+      pos: positionAt(start.pos, team.pos, departDelay(teamTiming(team, playerTiming), zone), timeSec),
     };
   });
 }

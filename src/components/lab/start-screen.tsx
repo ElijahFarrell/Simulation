@@ -1,11 +1,11 @@
 "use client";
 
 import { ArrowRightIcon, MapPinIcon, SwordsIcon, TimerIcon } from "lucide-react";
-import { LobbySetup } from "@/components/lobby-setup";
-import { MapLegend } from "@/components/map-legend";
+import { LobbySetup } from "@/components/lab/lobby-setup";
+import { MapLegend } from "@/components/lab/map-legend";
 import { SiteHeader } from "@/components/site-header";
 import { StatTile } from "@/components/stat-tile";
-import type { LabSettings } from "@/components/lab-state";
+import type { LabSettings } from "@/components/lab/lab-state";
 import { ZONE_TABLE } from "@/engine/constants";
 import { SCENARIOS } from "@/engine/scenarios";
 import type { SavedStats } from "@/lib/review";

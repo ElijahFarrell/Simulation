@@ -6,19 +6,19 @@ export function dist(a: Vec, b: Vec): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-export function len(v: Vec): number {
+function len(v: Vec): number {
   return Math.hypot(v.x, v.y);
 }
 
-export function add(a: Vec, b: Vec): Vec {
+function add(a: Vec, b: Vec): Vec {
   return { x: a.x + b.x, y: a.y + b.y };
 }
 
-export function sub(a: Vec, b: Vec): Vec {
+function sub(a: Vec, b: Vec): Vec {
   return { x: a.x - b.x, y: a.y - b.y };
 }
 
-export function scale(v: Vec, factor: number): Vec {
+function scale(v: Vec, factor: number): Vec {
   return { x: v.x * factor, y: v.y * factor };
 }
 
@@ -84,14 +84,17 @@ export function pointFromNorth(origin: Vec, angle: number, distance: number): Ve
   };
 }
 
-/** Area-uniform sample of a disc. */
 export function sampleDisc(rng: Rng, center: Vec, radius: number): Vec {
   if (radius <= 0) return { ...center };
   const r = radius * Math.sqrt(rng.next());
   const theta = Math.PI * 2 * rng.next();
+  return polar(center, theta, r);
+}
+
+export function polar(origin: Vec, angle: number, distance: number): Vec {
   return {
-    x: center.x + r * Math.cos(theta),
-    y: center.y + r * Math.sin(theta),
+    x: origin.x + Math.cos(angle) * distance,
+    y: origin.y + Math.sin(angle) * distance,
   };
 }
 

@@ -1,8 +1,11 @@
+import { asRecord, finiteNumber, nonEmptyString } from "@/lib/json";
 import { eventDisplay, type EventDisplay } from "./event-display";
 import { advancementSpots, summarizeGames, type GameLine, type GameSummary } from "./qualify";
 
 export const REGIONS = ["EU", "NAE", "NAC", "NAW", "BR", "ASIA", "ME", "OCE"] as const;
 export type Region = (typeof REGIONS)[number];
+
+export const DEFAULT_REGION: Region = "EU";
 
 export function isRegion(value: string): value is Region {
   return (REGIONS as readonly string[]).includes(value);
@@ -35,27 +38,13 @@ export type ParsedEntry = {
   games: GameLine[];
 };
 
-function record(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
-function text(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function num(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function stat(stats: Record<string, unknown>, key: string): number {
-  const value = num(stats[key]);
-  return value ?? 0;
+  return finiteNumber(stats[key]) ?? 0;
 }
 
 function gameFromSession(value: unknown): GameLine | null {
-  const session = record(value);
-  const stats = session ? record(session.trackedStats) : null;
+  const session = asRecord(value);
+  const stats = session ? asRecord(session.trackedStats) : null;
   if (!stats) return null;
   return {
     damageDealt: stat(stats, "DamageDealt"),
@@ -66,46 +55,46 @@ function gameFromSession(value: unknown): GameLine | null {
 }
 
 export function parseTournaments(payload: unknown): TournamentSummary[] {
-  const body = record(payload);
+  const body = asRecord(payload);
   const list = body?.tournaments;
   if (!Array.isArray(list)) return [];
   const tournaments: TournamentSummary[] = [];
   for (const item of list) {
-    const event = record(item);
-    const eventId = event ? text(event.eventId) : null;
-    const display = event ? record(event.displayData) : null;
-    const title = (display && (text(display.longFormatTitle) || text(display.titleLine1))) || eventId;
+    const event = asRecord(item);
+    const eventId = event ? nonEmptyString(event.eventId) : null;
+    const display = event ? asRecord(event.displayData) : null;
+    const title = (display && (nonEmptyString(display.longFormatTitle) || nonEmptyString(display.titleLine1))) || eventId;
     if (!event || !eventId || !title || !Array.isArray(event.eventWindows)) continue;
     const windows: TournamentWindow[] = [];
     for (const rawWindow of event.eventWindows) {
-      const window = record(rawWindow);
+      const window = asRecord(rawWindow);
       if (!window) continue;
       const locations = Array.isArray(window.scoreLocations) ? window.scoreLocations : [];
       const main =
-        locations.map(record).find((location) => location?.isMain === true) ??
-        locations.map(record).find((location) => location !== null);
-      const leaderboardEventId = main ? text(main.leaderboardEventId) : null;
-      const leaderboardEventWindowId = main ? text(main.leaderboardEventWindowId) : null;
-      const windowId = text(window.eventWindowId);
-      const beginTime = text(window.beginTime);
-      const endTime = text(window.endTime);
+        locations.map(asRecord).find((location) => location?.isMain === true) ??
+        locations.map(asRecord).find((location) => location !== null);
+      const leaderboardEventId = main ? nonEmptyString(main.leaderboardEventId) : null;
+      const leaderboardEventWindowId = main ? nonEmptyString(main.leaderboardEventWindowId) : null;
+      const windowId = nonEmptyString(window.eventWindowId);
+      const beginTime = nonEmptyString(window.beginTime);
+      const endTime = nonEmptyString(window.endTime);
       if (!windowId || !beginTime || !endTime || !leaderboardEventId || !leaderboardEventWindowId) continue;
       const tables = (Array.isArray(main?.payoutTables) ? main.payoutTables : []).flatMap((table) => {
-        const parsed = record(table);
+        const parsed = asRecord(table);
         if (!parsed || typeof parsed.scoringType !== "string" || !Array.isArray(parsed.ranks)) return [];
         return [
           {
             scoringType: parsed.scoringType,
             ranks: parsed.ranks.flatMap((rank) => {
-              const row = record(rank);
-              const threshold = row ? num(row.threshold) : null;
+              const row = asRecord(rank);
+              const threshold = row ? finiteNumber(row.threshold) : null;
               if (!row || threshold === null || !Array.isArray(row.payouts)) return [];
               return [
                 {
                   threshold,
                   payouts: row.payouts.flatMap((payout) => {
-                    const reward = record(payout);
-                    const rewardType = reward ? text(reward.rewardType) : null;
+                    const reward = asRecord(payout);
+                    const rewardType = reward ? nonEmptyString(reward.rewardType) : null;
                     return rewardType ? [{ rewardType }] : [];
                   }),
                 },
@@ -118,7 +107,7 @@ export function parseTournaments(payload: unknown): TournamentSummary[] {
         windowId,
         beginTime,
         endTime,
-        matchCap: num(window.matchCap) ?? 0,
+        matchCap: finiteNumber(window.matchCap) ?? 0,
         qualSpots: advancementSpots(tables),
         leaderboardEventId,
         leaderboardEventWindowId,
@@ -126,7 +115,7 @@ export function parseTournaments(payload: unknown): TournamentSummary[] {
     }
     windows.sort((a, b) => Date.parse(b.beginTime) - Date.parse(a.beginTime));
     const playlists = event.eventWindows.flatMap((raw) => {
-      const playlistId = text(record(raw)?.playlistId);
+      const playlistId = nonEmptyString(asRecord(raw)?.playlistId);
       return playlistId ? [playlistId] : [];
     });
     const shown = eventDisplay({ eventId, title, display, regions: event.regions, playlists });
@@ -138,26 +127,25 @@ export function parseTournaments(payload: unknown): TournamentSummary[] {
 
 export function parseLeaderboardPage(payload: unknown): {
   entries: ParsedEntry[];
-  totalPages: number;
   updatedAt: string | null;
 } {
-  const body = record(payload);
-  const board = body ? record(body.leaderboard) : null;
+  const body = asRecord(payload);
+  const board = body ? asRecord(body.leaderboard) : null;
   if (!board || !Array.isArray(board.entries)) {
     throw new Error("Leaderboard format changed.");
   }
   const entries: ParsedEntry[] = [];
   for (const item of board.entries) {
-    const entry = record(item);
+    const entry = asRecord(item);
     if (!entry) continue;
-    const rank = num(entry.rank);
-    const points = num(entry.pointsEarned);
-    const teamId = text(entry.teamId);
+    const rank = finiteNumber(entry.rank);
+    const points = finiteNumber(entry.pointsEarned);
+    const teamId = nonEmptyString(entry.teamId);
     if (rank === null || points === null || !teamId || !Array.isArray(entry.players)) continue;
     const players = entry.players.flatMap((player) => {
-      const row = record(player);
-      const accountId = row ? text(row.accountId) : null;
-      const username = row ? text(row.username) : null;
+      const row = asRecord(player);
+      const accountId = row ? nonEmptyString(row.accountId) : null;
+      const username = row ? nonEmptyString(row.username) : null;
       return accountId && username ? [{ accountId: accountId.toLowerCase(), username }] : [];
     });
     if (players.length === 0) continue;
@@ -177,27 +165,26 @@ export function parseLeaderboardPage(payload: unknown): {
   }
   return {
     entries,
-    totalPages: num(board.totalPages) ?? 1,
-    updatedAt: text(board.updatedAt),
+    updatedAt: nonEmptyString(board.updatedAt),
   };
 }
 
 export function parseAccountLookup(payload: unknown): { accountId: string; displayName: string }[] {
-  const body = record(payload);
+  const body = asRecord(payload);
   if (!body || body.success !== true) return [];
   const matches: { accountId: string; displayName: string }[] = [];
   const rows = Array.isArray(body.accounts) ? body.accounts : [];
   for (const item of rows) {
-    const row = record(item);
-    const details = row ? record(row.accountDetails) : null;
-    const accountId = row ? text(row.accountId) : null;
-    const displayName = details ? text(details.epic) : null;
+    const row = asRecord(item);
+    const details = row ? asRecord(row.accountDetails) : null;
+    const accountId = row ? nonEmptyString(row.accountId) : null;
+    const displayName = details ? nonEmptyString(details.epic) : null;
     if (!accountId || !displayName) continue;
     matches.push({ accountId: accountId.toLowerCase(), displayName });
   }
   if (matches.length > 0) return matches;
-  const accountId = text(body.accountId);
-  const details = record(body.accountDetails);
-  const displayName = details ? text(details.epic) : null;
+  const accountId = nonEmptyString(body.accountId);
+  const details = asRecord(body.accountDetails);
+  const displayName = details ? nonEmptyString(details.epic) : null;
   return accountId && displayName ? [{ accountId: accountId.toLowerCase(), displayName }] : [];
 }

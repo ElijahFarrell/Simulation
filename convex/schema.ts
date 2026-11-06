@@ -20,7 +20,6 @@ export default defineSchema({
     .index("by_token", ["tokenIdentifier"])
     .index("by_epic", ["epicAccountId"]),
 
-  // One row per uploaded .replay file. Folder sync skips files whose name and size already exist.
   replays: defineTable({
     userId: v.id("users"),
     storageId: v.id("_storage"),

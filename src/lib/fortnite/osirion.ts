@@ -53,7 +53,7 @@ export async function leaderboardPage(
   leaderboardEventId: string,
   leaderboardEventWindowId: string,
   page: number,
-): Promise<{ entries: ParsedEntry[]; totalPages: number; updatedAt: string | null }> {
+): Promise<{ entries: ParsedEntry[]; updatedAt: string | null }> {
   const url =
     `${BASE}/v1/tournaments/leaderboard` +
     `?leaderboardEventId=${encodeURIComponent(leaderboardEventId)}` +

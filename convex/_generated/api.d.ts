@@ -9,7 +9,6 @@
  */
 
 import type * as epic from "../epic.js";
-import type * as matches from "../matches.js";
 import type * as replays from "../replays.js";
 import type * as users from "../users.js";
 
@@ -21,7 +20,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   epic: typeof epic;
-  matches: typeof matches;
   replays: typeof replays;
   users: typeof users;
 }>;

@@ -1,107 +1,64 @@
 "use client";
 
 import { RefreshCwIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { SessionPanel } from "@/components/stats/session-panel";
 import { Button } from "@/components/ui/button";
 import { EventDetail } from "@/components/stats/event-detail";
 import { EventsCatalog } from "@/components/stats/events-catalog";
 import { NativeSelect } from "@/components/ui/native-select";
 import { inRegion } from "@/lib/fortnite/catalog";
-import { REGIONS, isRegion, type Region, type TournamentSummary } from "@/lib/fortnite/parse";
+import { DEFAULT_REGION, REGIONS, isRegion, type Region, type TournamentSummary } from "@/lib/fortnite/parse";
 import { pickDefaultSession, type SessionView } from "@/lib/fortnite/session";
+import { useJson } from "@/lib/use-json";
 import { cn } from "@/lib/utils";
 
 const REGION_KEY = "hub-region";
 
 function savedRegion(): Region {
   const saved = typeof window === "undefined" ? null : window.localStorage.getItem(REGION_KEY);
-  return saved && isRegion(saved) ? saved : "EU";
+  return saved && isRegion(saved) ? saved : DEFAULT_REGION;
 }
+
+type Pick = { eventId: string; windowId: string };
 
 export function SessionBoard({ accountId }: { accountId: string | null }) {
   // Only mounts after Convex auth resolves in the browser, so reading localStorage here can't mismatch SSR.
   const [region, setRegion] = useState<Region>(savedRegion);
   const [now, setNow] = useState(() => Date.now());
-  const [events, setEvents] = useState<TournamentSummary[] | null>(null);
-  const [eventId, setEventId] = useState<string>("");
-  const [windowId, setWindowId] = useState<string>("");
+  const [pick, setPick] = useState<Pick | null>(null);
   const [appliedPoints, setAppliedPoints] = useState("");
-  const [view, setView] = useState<SessionView | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadingSession, setLoadingSession] = useState(false);
   const [refresh, setRefresh] = useState(0);
 
+  const list = useJson<{ tournaments: TournamentSummary[] }>(
+    `/api/fortnite/tournaments?region=${region}`,
+    "Couldn't load tournaments.",
+  );
+  const events = list.loading || list.error ? null : (list.data?.tournaments ?? null);
+  const defaultPick = useMemo(
+    () => (events ? pickDefaultSession(events.filter((item) => inRegion(item, region)), now) : null),
+    [events, region, now],
+  );
+  const selection = pick ?? defaultPick;
+  const eventId = selection?.eventId ?? "";
+  const windowId = selection?.windowId ?? "";
   const event = events?.find((item) => item.eventId === eventId) ?? null;
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingList(true);
-    setError(null);
-    void fetch(`/api/fortnite/tournaments?region=${region}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error(await response.text());
-        return response.json() as Promise<{ tournaments: TournamentSummary[] }>;
-      })
-      .then((body) => {
-        if (cancelled) return;
-        setEvents(body.tournaments);
-        setNow(Date.now());
-        const picked = pickDefaultSession(
-          body.tournaments.filter((item) => inRegion(item, region)),
-          Date.now(),
-        );
-        setEventId(picked?.eventId ?? "");
-        setWindowId(picked?.windowId ?? "");
-        setAppliedPoints("");
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Couldn't load tournaments.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingList(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [region]);
+  const params = new URLSearchParams({ region, eventId, windowId });
+  if (accountId) params.set("accountId", accountId);
+  if (appliedPoints) params.set("points", appliedPoints);
+  const sessionUrl = eventId && windowId ? `/api/fortnite/session?${params.toString()}` : null;
+  const session = useJson<SessionView>(sessionUrl, "Couldn't load that session.", refresh);
+  const view = sessionUrl ? session.data : null;
+  const error = list.error ?? session.error;
 
-  useEffect(() => {
-    if (!eventId || !windowId) return;
-    let cancelled = false;
-    const params = new URLSearchParams({ region, eventId, windowId });
-    if (accountId) params.set("accountId", accountId);
-    if (appliedPoints) params.set("points", appliedPoints);
-    setLoadingSession(true);
-    setError(null);
-    void fetch(`/api/fortnite/session?${params.toString()}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error(await response.text());
-        return response.json() as Promise<SessionView>;
-      })
-      .then((body) => {
-        if (!cancelled) setView(body);
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "Couldn't load that session.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingSession(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [region, eventId, windowId, accountId, appliedPoints, refresh]);
-
-  const busy = loadingList || loadingSession;
+  const busy = list.loading || session.loading;
   const empty = events !== null && events.length === 0;
 
   function pickEvent(next: string) {
     const picked = events?.find((item) => item.eventId === next);
     const choice = picked ? pickDefaultSession([picked], Date.now()) : null;
-    setEventId(next);
-    setWindowId(choice?.windowId ?? "");
+    setPick({ eventId: next, windowId: choice?.windowId ?? "" });
     setAppliedPoints("");
     requestAnimationFrame(() =>
       document.getElementById("event-detail")?.scrollIntoView({ behavior: "smooth", block: "start" }),
@@ -126,6 +83,9 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
               const next = change.target.value as Region;
               window.localStorage.setItem(REGION_KEY, next);
               setRegion(next);
+              setPick(null);
+              setAppliedPoints("");
+              setNow(Date.now());
             }}
           >
             {REGIONS.map((item) => (
@@ -140,6 +100,7 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
             size="lg"
             disabled={busy || !windowId}
             onClick={() => {
+              setPick(selection);
               setNow(Date.now());
               setRefresh((value) => value + 1);
             }}
@@ -165,7 +126,7 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
           selectedEventId={eventId}
           onSelect={pickEvent}
         />
-      ) : loadingList ? (
+      ) : list.loading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-hidden>
           {Array.from({ length: 5 }, (_, index) => (
             <div key={index} className="aspect-[4/5] animate-pulse rounded-xl bg-card" />
@@ -183,14 +144,14 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
           windowId={windowId}
           now={now}
           onWindow={(next) => {
-            setWindowId(next);
+            setPick({ eventId, windowId: next });
             setAppliedPoints("");
           }}
         />
       ) : null}
 
       {view ? (
-        <div className={cn("transition-opacity", loadingSession && "opacity-60")}>
+        <div className={cn("transition-opacity", session.loading && "opacity-60")}>
           <SessionPanel
             key={`${view.title}:${view.windowId}`}
             view={view}
@@ -198,7 +159,7 @@ export function SessionBoard({ accountId }: { accountId: string | null }) {
             onPoints={setAppliedPoints}
           />
         </div>
-      ) : loadingSession ? (
+      ) : session.loading ? (
         <SessionSkeleton />
       ) : null}
 

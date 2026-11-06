@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAP_SIZE } from "../constants";
-import { createLobby } from "../lobby";
+import { createLobby, normalizeSettings } from "../lobby";
 import { createRng } from "../rng";
 import { generateZones } from "../zones";
 import { isLandColor, isLandPoint, stayOnLand, type LandMask } from "../land";
@@ -26,7 +26,7 @@ describe("island land", () => {
 
     const zone = generateZones(createRng(3))[0];
     if (!zone) throw new Error("missing zone");
-    const teams = createLobby(createRng(4), zone, { teamCount: 33, fighterWeight: 0.2 }, mask);
+    const teams = createLobby(createRng(4), zone, normalizeSettings({ teamCount: 33, fighterWeight: 0.2 }), mask);
     expect(teams.every((team) => isLandPoint(mask, team.pos))).toBe(true);
     const player = teams.find((team) => team.isPlayer);
     expect(player).toBeTruthy();

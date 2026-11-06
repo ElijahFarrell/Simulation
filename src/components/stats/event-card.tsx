@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { CatalogEvent } from "@/lib/fortnite/catalog";
 import { relativeTime } from "@/lib/fortnite/catalog";
+import { LAN_REGION } from "@/lib/fortnite/event-display";
 import { cn } from "@/lib/utils";
 
 function StatusBadge({ item, now }: { item: CatalogEvent; now: number }) {
@@ -39,7 +40,7 @@ export function EventCard({
 }) {
   const { event } = item;
   const display = event.display;
-  const regions = (display?.regions ?? []).filter((region) => region !== "ONSITE");
+  const regions = (display?.regions ?? []).filter((region) => region !== LAN_REGION);
   return (
     <button
       type="button"
@@ -72,7 +73,7 @@ export function EventCard({
             <span className="rounded-md bg-black/70 px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold text-white/90 backdrop-blur">
               {regions.length > 2 ? "MULTI" : regions.join(", ")}
             </span>
-          ) : display?.regions.includes("ONSITE") ? (
+          ) : display?.regions.includes(LAN_REGION) ? (
             <span className="rounded-md bg-black/70 px-1.5 py-0.5 text-[0.65rem] font-semibold text-white/90 backdrop-blur">
               LAN
             </span>

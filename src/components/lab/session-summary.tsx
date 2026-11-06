@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import type { GameState } from "@/engine/types";
 import { averageScore, worstHabit } from "@/lib/review";
-import { scoreTone, TONE_FILL, TONE_TEXT } from "@/lib/score-tone";
+import { scoreTone, TONE_FILL, TONE_TEXT } from "@/components/lab/score-tone";
 
 export function SessionSummary({
   game,

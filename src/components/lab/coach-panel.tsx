@@ -4,7 +4,7 @@ import { type Chat, useChat } from "@ai-sdk/react";
 import { APICallError, type UIMessage } from "ai";
 import { SendIcon, SparklesIcon, SquareIcon } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { CoachMessage } from "@/components/coach-message";
+import { CoachMessage } from "@/components/lab/coach-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Segmented, SegmentedItem } from "@/components/ui/segmented";

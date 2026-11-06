@@ -1,6 +1,6 @@
 import type { PhaseResult } from "@/engine/types";
 import { cn } from "@/lib/utils";
-import { scoreTone, TONE_FILL } from "@/lib/score-tone";
+import { scoreTone, TONE_FILL } from "@/components/lab/score-tone";
 
 export function ZoneTrack({
   current,

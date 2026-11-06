@@ -1,4 +1,4 @@
-import type { GameSettings, PullType } from "./types";
+import type { Engagement, GameSettings, PullType, Timing } from "./types";
 
 /**
  * Teaching approximations, not Epic's live zone table. Every number that
@@ -8,8 +8,8 @@ export const MAP_SIZE = 1000;
 export const INITIAL_RADIUS = 500;
 /** Crossbones Isle lobbies are 80 players. Trios is 27 teams of 3. Solos is 80 players of 1. */
 export const GAME_MODES = {
-  trios: { squadSize: 3, teamCount: 27, minTeams: 13, maxTeams: 27 },
-  solos: { squadSize: 1, teamCount: 80, minTeams: 32, maxTeams: 80 },
+  trios: { squadSize: 3, teamCount: 27, minTeams: 13, maxTeams: 27, others: "trios", countLabel: "Teams", squadLabel: "Trio" },
+  solos: { squadSize: 1, teamCount: 80, minTeams: 32, maxTeams: 80, others: "players", countLabel: "Alive", squadLabel: "You" },
 } as const;
 export const ROTATE_SPEED = 5.5;
 /** Seconds spent looting each stop after the drop. Travel uses ROTATE_SPEED. */
@@ -25,10 +25,10 @@ export const CONTACT_RADIUS = 42;
 export const THIRD_PARTY_RADIUS = 96;
 export const EXPOSURE_RADIUS = 170;
 export const MC_SAMPLES = 160;
+export const HEAT_STEPS = 16;
 export const MAX_MATS = 1000;
 export const START_MATS = 480;
 export const START_HEALS = 140;
-export const START_HP = 300;
 export const HP_PER_ALIVE = 100;
 export const LATE_REFRESH_MATS = 280;
 export const STANDARD_REFRESH_MATS = 90;
@@ -38,13 +38,13 @@ export const AVOID_ESCAPE_CHANCE = 0.72;
 export const AI_FIGHT_CHANCE = 0.55;
 export const SURGE_HIT_FRACTION = 0.3;
 export const SURGE_BASE_DAMAGE = 100;
+export const SURGE_DAMAGE_PER_ZONE = 6;
 export const DEAD_MAX = 1;
 export const STACKED_MIN = 3;
 export const TAG_DAMAGE = 220;
 
 export const DEFAULT_SETTINGS: GameSettings = {
   mode: "trios",
-  squadSize: GAME_MODES.trios.squadSize,
   teamCount: GAME_MODES.trios.teamCount,
   fighterWeight: 0.2,
   dropStyle: "opens",
@@ -98,7 +98,7 @@ export const ZONE_TABLE: readonly ZoneRow[] = [
 ];
 
 /** Alive-team count above which surge damage actually fires, per zone index. */
-export const SURGE_TEAM_THRESHOLD: readonly number[] = [
+const SURGE_TEAM_THRESHOLD: readonly number[] = [
   99, 99, 18, 15, 12, 10, 8, 6, 99, 99, 99, 99,
 ];
 
@@ -130,11 +130,23 @@ export const PULL_COPY: Record<PullType, { name: string; line: string }> = {
   },
 };
 
+export const TIMING_LABELS: Record<Timing, string> = {
+  early: "Right away",
+  standard: "Wait a bit",
+  late: "Loot first",
+};
+
+export const ENGAGEMENT_LABELS: Record<Engagement, string> = {
+  avoid: "Stay away",
+  tag: "Hit and leave",
+  fight: "Full fight",
+};
+
 export function surgeThreshold(zoneIndex: number): number {
   return SURGE_TEAM_THRESHOLD[zoneIndex - 1] ?? 99;
 }
 
-export const SECTOR_NAMES = [
+const SECTOR_NAMES = [
   "north",
   "north-east",
   "east",

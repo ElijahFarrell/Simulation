@@ -1,7 +1,13 @@
-export const EPIC_AUTHORIZE_URL = "https://www.epicgames.com/id/authorize";
+const EPIC_AUTHORIZE_URL = "https://www.epicgames.com/id/authorize";
 export const EPIC_TOKEN_URL = "https://api.epicgames.dev/epic/oauth/v2/token";
 export const EPIC_USERINFO_URL = "https://api.epicgames.dev/epic/oauth/v2/userInfo";
 export const EPIC_BASIC_PROFILE_SCOPE = "basic_profile";
+
+export type EpicResult = "linked" | "denied" | "failed" | "taken" | "not-configured";
+
+export function epicResultPath(result: EpicResult): string {
+  return `/stats?epic=${result}`;
+}
 
 export function epicAuthorizeUrl(args: { clientId: string; redirectUri: string; state: string }): string {
   const url = new URL(EPIC_AUTHORIZE_URL);

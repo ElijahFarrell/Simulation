@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { Overlays } from "@/components/lab-state";
+import type { Overlays } from "@/components/lab/lab-state";
 
 const TOGGLES: { key: keyof Overlays; label: string; swatch: string }[] = [
   { key: "density", label: "Sides", swatch: "size-2.5 rounded-sm bg-gradient-to-r from-emerald-400 to-red-400" },

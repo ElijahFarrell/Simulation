@@ -3,7 +3,8 @@ import { advancePhase, createGame } from "@/engine/game";
 import { dist } from "@/engine/geometry";
 import { stayOnLand } from "@/engine/land";
 import { resolveDecision } from "@/engine/step";
-import type { DropStyle, Engagement, GameMode, GameState, LandMask, PullType, Team, Timing, Vec } from "@/engine/types";
+import type { Place } from "@/lib/island/project";
+import type { Engagement, GameSettings, GameState, LandMask, PullType, Team, Timing, Vec } from "@/engine/types";
 
 export type Overlays = {
   density: boolean;
@@ -11,13 +12,7 @@ export type Overlays = {
   heatmap: boolean;
 };
 
-export type LabSettings = {
-  mode: GameMode;
-  teamCount: number;
-  fighterWeight: number;
-  dropStyle: DropStyle;
-  hints: boolean;
-};
+export type LabSettings = GameSettings & { hints: boolean };
 
 export type LabState = {
   screen: "menu" | "play";
@@ -33,22 +28,22 @@ export type LabState = {
   runId: number;
   pullGuess: PullType | null;
   land: LandMask | null;
-  places: Vec[];
+  places: Place[];
   planning: boolean;
   route: Vec[];
 };
 
 export type LabAction =
-  | { type: "start"; seed: number; scenarioId: string | null; land: LandMask | null; places: Vec[] }
+  | { type: "start"; seed: number; scenarioId: string | null }
+  | { type: "places"; places: Place[] }
   | { type: "land"; land: LandMask }
-  | { type: "drop-add"; point: Vec }
+  | { type: "pick"; point: Vec }
   | { type: "drop-undo" }
   | { type: "drop-clear" }
   | { type: "drop-skip" }
   | { type: "drop-lock" }
   | { type: "restart" }
   | { type: "menu" }
-  | { type: "destination"; destination: Vec }
   | { type: "timing"; timing: Timing }
   | { type: "engagement"; engagement: Engagement }
   | { type: "lock" }
@@ -67,13 +62,7 @@ export const initialLabState: LabState = {
   overlays: { density: true, pull: true, heatmap: false },
   animating: false,
   animFrom: null,
-  settings: {
-    mode: DEFAULT_SETTINGS.mode,
-    teamCount: DEFAULT_SETTINGS.teamCount,
-    fighterWeight: DEFAULT_SETTINGS.fighterWeight,
-    dropStyle: DEFAULT_SETTINGS.dropStyle,
-    hints: true,
-  },
+  settings: { ...DEFAULT_SETTINGS, hints: true },
   scenarioId: null,
   runId: 0,
   pullGuess: null,
@@ -93,15 +82,13 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         overlays: { ...state.overlays, [action.key]: !state.overlays[action.key] },
       };
     case "start":
-      return begin(
-        { ...state, land: action.land, places: action.places },
-        action.seed,
-        action.scenarioId,
-      );
+      return begin(state, action.seed, action.scenarioId);
+    case "places":
+      return { ...state, places: action.places };
     case "land":
       return applyLand(state, action.land);
-    case "drop-add":
-      return addStop(state, action.point);
+    case "pick":
+      return state.planning ? addStop(state, action.point) : pickDestination(state, action.point);
     case "drop-undo":
       return state.planning ? { ...state, route: state.route.slice(0, -1) } : state;
     case "drop-clear":
@@ -123,9 +110,6 @@ export function labReducer(state: LabState, action: LabAction): LabState {
         planning: false,
         route: [],
       };
-    case "destination":
-      if (!state.game || state.planning || state.game.status !== "deciding" || state.animating) return state;
-      return { ...state, destination: action.destination };
     case "timing":
       return { ...state, timing: action.timing };
     case "engagement":
@@ -139,8 +123,6 @@ export function labReducer(state: LabState, action: LabAction): LabState {
       return { ...state, pullGuess: action.pull };
     case "next":
       return advance(state);
-    default:
-      return state;
   }
 }
 
@@ -162,13 +144,19 @@ function begin(state: LabState, seed: number, scenarioId: string | null): LabSta
   };
 }
 
-function addStop(state: LabState, point: Vec): LabState {
-  if (!state.planning || !state.game || state.animating || state.route.length >= MAX_ROUTE_STOPS) {
-    return state;
-  }
+function addStop(state: LabState, picked: Vec): LabState {
+  const game = state.game;
+  const zone = game?.zones[game.phaseIndex];
+  if (!game || !zone || state.animating || state.route.length >= MAX_ROUTE_STOPS) return state;
+  const point = stayOnLand(game.landMask, picked, zone.from);
   const last = state.route[state.route.length - 1];
   if (last && dist(last, point) < 12) return state;
   return { ...state, route: [...state.route, point] };
+}
+
+function pickDestination(state: LabState, point: Vec): LabState {
+  if (!state.game || state.game.status !== "deciding" || state.animating) return state;
+  return { ...state, destination: stayOnLand(state.game.landMask, point) };
 }
 
 function lockDrop(state: LabState): LabState {

@@ -1,4 +1,4 @@
-import { RotationLab } from "@/components/rotation-lab";
+import { RotationLab } from "@/components/lab/rotation-lab";
 
 export default function Home() {
   return <RotationLab />;

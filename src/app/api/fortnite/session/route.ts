@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
-import { signedInOrResponse } from "@/lib/fortnite/access";
+import { isEpicAccountId } from "@/lib/epic/profile";
+import { fortniteRoute } from "@/lib/fortnite/access";
 import { loadSession } from "@/lib/fortnite/load-session";
-import { FortniteDataError } from "@/lib/fortnite/osirion";
-import { isRegion } from "@/lib/fortnite/parse";
+import { DEFAULT_REGION, isRegion } from "@/lib/fortnite/parse";
 
-export async function GET(request: Request): Promise<Response> {
-  const denied = await signedInOrResponse();
-  if (denied) return denied;
+export const GET = fortniteRoute("That session didn't load.", async (request) => {
   const params = new URL(request.url).searchParams;
-  const region = params.get("region") ?? "EU";
+  const region = params.get("region") ?? DEFAULT_REGION;
   const eventId = params.get("eventId") ?? "";
   const windowId = params.get("windowId") ?? "";
   const accountId = params.get("accountId");
   const points = params.get("points");
   if (!isRegion(region)) return new Response("Unknown region.", { status: 400 });
   if (!eventId || !windowId) return new Response("Pick a session.", { status: 400 });
-  if (accountId && !/^[0-9a-f]{32}$/i.test(accountId)) return new Response("Epic account id looks wrong.", { status: 400 });
+  if (accountId && !isEpicAccountId(accountId)) return new Response("Epic account id looks wrong.", { status: 400 });
 
   let typedPoints: number | null = null;
   if (points !== null && points !== "") {
@@ -26,18 +24,5 @@ export async function GET(request: Request): Promise<Response> {
     typedPoints = parsed;
   }
 
-  try {
-    const view = await loadSession({
-      region,
-      eventId,
-      windowId,
-      accountId,
-      typedPoints,
-      now: Date.now(),
-    });
-    return NextResponse.json(view);
-  } catch (error) {
-    const message = error instanceof FortniteDataError ? error.message : "That session didn't load.";
-    return new Response(message, { status: 502 });
-  }
-}
+  return NextResponse.json(await loadSession({ region, eventId, windowId, accountId, typedPoints, now: Date.now() }));
+});

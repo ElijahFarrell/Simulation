@@ -1,7 +1,7 @@
-import { SECTOR_COUNT, sectorName } from "@/engine/constants";
-import { describeCall, heldCenter } from "@/engine/feedback";
-import { sectorIndex } from "@/engine/geometry";
+import { sectorName } from "@/engine/constants";
+import { describeCall, destinationSide } from "@/engine/feedback";
 import { pointsLost } from "@/engine/scoring";
+import { aliveCount, playerOf } from "@/engine/teams";
 import { nearestPlace, type Place } from "@/lib/island/project";
 import type { GameState, PhaseResult, ScoreBreakdown } from "@/engine/types";
 import type { CoachContext, CoachZoneCall } from "./schema";
@@ -11,19 +11,19 @@ export function buildCoachContext(
   focusZone: number | null,
   places: readonly Place[] = [],
 ): CoachContext {
-  const player = game.teams.find((team) => team.isPlayer);
+  const player = playerOf(game.teams);
   return {
     seed: game.seed,
     mode: game.settings.mode,
     status: game.status,
     placement: game.placement,
     lobbySize: game.teams.length,
-    teamsAlive: game.teams.filter((team) => !team.eliminated).length,
+    teamsAlive: aliveCount(game.teams),
     player: {
-      alive: player?.alive ?? 0,
-      hp: Math.round(player?.hp ?? 0),
-      mats: Math.round(player?.mats ?? 0),
-      heals: Math.round(player?.heals ?? 0),
+      alive: player.alive,
+      hp: Math.round(player.hp),
+      mats: Math.round(player.mats),
+      heals: Math.round(player.heals),
     },
     focusZone,
     zones: game.history.map((phase) => describeZoneCall(phase, places)),
@@ -47,17 +47,15 @@ export function coachStarters(context: CoachContext): string[] {
 }
 
 function describeZoneCall(phase: PhaseResult, places: readonly Place[]): CoachZoneCall {
-  const center = heldCenter(phase.decision, phase.zone.to);
-  const sector = center
-    ? null
-    : (phase.sectors[sectorIndex(phase.zone.to.center, phase.decision.destination, SECTOR_COUNT)] ?? null);
+  const side = destinationSide(phase.decision.destination, phase.zone.to, phase.sectors);
+  const { sector } = side;
   return {
     zone: phase.zone.index,
     moving: phase.zone.isMoving,
     pull: phase.zone.pull,
     surgeActive: phase.zone.surgeActive,
     stormDps: phase.zone.stormDps,
-    call: describeCall(phase.decision, sector, center),
+    call: describeCall(phase.decision, side),
     place: nearestPlace(places, phase.decision.destination),
     timing: phase.decision.timing,
     engagement: phase.decision.engagement,

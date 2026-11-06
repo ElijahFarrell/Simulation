@@ -3,11 +3,9 @@ import { ConvexHttpClient } from "convex/browser";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { api } from "@convex/_generated/api";
-import { epicCallbackUrl } from "@/lib/epic/authorize";
+import { epicCallbackUrl, epicResultPath, type EpicResult } from "@/lib/epic/authorize";
 import { clerkEnabled } from "@/lib/clerk-enabled";
 import { EPIC_STATE_COOKIE, oauthStatesMatch } from "@/lib/epic/state";
-
-type EpicResult = "linked" | "denied" | "failed" | "taken" | "not-configured";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -46,7 +44,7 @@ function resultCode(error: unknown): EpicResult {
 }
 
 function redirectEpic(url: URL, result: EpicResult) {
-  const response = NextResponse.redirect(new URL(`/stats?epic=${result}`, url));
+  const response = NextResponse.redirect(new URL(epicResultPath(result), url));
   response.cookies.set(EPIC_STATE_COOKIE, "", { path: "/api/epic", maxAge: 0 });
   return response;
 }

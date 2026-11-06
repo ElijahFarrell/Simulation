@@ -2,11 +2,12 @@ import {
   DEAD_MAX,
   EXPOSURE_RADIUS,
   HALF_PULL_REACH,
+  HEAT_STEPS,
   MC_SAMPLES,
   SECTOR_COUNT,
   STACKED_MIN,
 } from "./constants";
-import { dist, pointInCircle, sectorIndex } from "./geometry";
+import { clamp, dist, pointFromNorth, pointInCircle, sectorIndex } from "./geometry";
 import { createRng } from "./rng";
 import type { Circle, SectorInfo, Team, Vec, ZonePhase } from "./types";
 import { placeNextZone } from "./zones";
@@ -58,7 +59,7 @@ export function pullRegion(
   return { center: current.to.center, radius };
 }
 
-export function exposureRadiusFor(zoneRadius: number): number {
+function exposureRadiusFor(zoneRadius: number): number {
   return Math.min(EXPOSURE_RADIUS, Math.max(48, zoneRadius * 0.85));
 }
 
@@ -105,7 +106,7 @@ export function positioningGrid(nextZone: Circle, following: ZonePhase, seed: nu
   const centers = sampleFutureCenters(nextZone, following, seed);
   const afterRadius = following.to.radius;
   const cells: HeatCell[] = [];
-  const steps = 16;
+  const steps = HEAT_STEPS;
   const minX = nextZone.center.x - nextZone.radius;
   const minY = nextZone.center.y - nextZone.radius;
   const span = nextZone.radius * 2;
@@ -131,17 +132,13 @@ export function positioningScore(
   nextZone: Circle,
   following: ZonePhase,
   seed: number,
-): { score: number; expected: number; best: number } {
+): number {
   const centers = sampleFutureCenters(nextZone, following, seed);
   const afterRadius = following.to.radius;
   const mine = expectedDistance(point, centers, afterRadius);
   const candidates = [nextZone.center];
   for (let i = 0; i < SECTOR_COUNT; i += 1) {
-    const angle = ((i + 0.5) / SECTOR_COUNT) * Math.PI * 2;
-    candidates.push({
-      x: nextZone.center.x + Math.sin(angle) * nextZone.radius * 0.92,
-      y: nextZone.center.y + Math.cos(angle) * nextZone.radius * 0.92,
-    });
+    candidates.push(pointFromNorth(nextZone.center, ((i + 0.5) / SECTOR_COUNT) * Math.PI * 2, nextZone.radius * 0.92));
   }
   let best = Number.POSITIVE_INFINITY;
   let worst = 0;
@@ -151,14 +148,6 @@ export function positioningScore(
     worst = Math.max(worst, value);
   }
   const span = Math.max(80, worst - best);
-  const score = clampScore(100 - ((mine - best) / span) * 100);
-  return { score, expected: mine, best };
+  return clamp(100 - ((mine - best) / span) * 100, 0, 100);
 }
 
-function clampScore(value: number): number {
-  return Math.min(100, Math.max(0, value));
-}
-
-export function teamsInBand(teams: readonly Team[], nextZone: Circle): number {
-  return sectorDensity(teams, nextZone).reduce((sum, sector) => sum + sector.teamCount, 0);
-}

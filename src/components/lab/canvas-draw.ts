@@ -1,6 +1,7 @@
 import type { HeatCell } from "@/engine/analysis";
-import { MAP_SIZE, SECTOR_COUNT } from "@/engine/constants";
+import { HEAT_STEPS, MAP_SIZE, SECTOR_COUNT } from "@/engine/constants";
 import { pointFromNorth } from "@/engine/geometry";
+import { playerOf } from "@/engine/teams";
 import type { Circle, SectorInfo, Team, Vec, ZonePhase } from "@/engine/types";
 
 const SECTOR_FILL = {
@@ -15,7 +16,7 @@ const SECTOR_FILL_ISLAND = {
   normal: "rgba(255, 255, 255, 0.02)",
 } as const;
 
-export function worldToScreen(point: Vec, size: number): Vec {
+function worldToScreen(point: Vec, size: number): Vec {
   return {
     x: (point.x / MAP_SIZE) * size,
     y: ((MAP_SIZE - point.y) / MAP_SIZE) * size,
@@ -39,14 +40,13 @@ export function drawMap(ctx: CanvasRenderingContext2D, size: number, scene: MapS
   drawCompass(ctx, size, scene.zone.to);
   drawTeams(ctx, size, scene.teams, scene.hidePlayer);
   if (scene.route && scene.route.length > 0) drawRoute(ctx, size, scene.route);
-  if (scene.destination && !scene.hidePlayer) drawPin(ctx, size, scene.player, scene.destination);
+  if (scene.destination && !scene.hidePlayer) drawPin(ctx, size, playerOf(scene.teams), scene.destination);
   if (scene.clock) drawClock(ctx, size, scene.clock, scene.zone.waitSec);
 }
 
-export type MapScene = {
+type MapScene = {
   zone: ZonePhase;
   teams: Team[];
-  player: Team;
   destination: Vec | null;
   sectors: SectorInfo[];
   pull: Circle | null;
@@ -160,7 +160,7 @@ function drawHeat(
     max = Math.max(max, cell.distance);
   }
   const span = Math.max(1, max - min);
-  const cellSize = ((circle.radius * 2) / 16 / MAP_SIZE) * size;
+  const cellSize = ((circle.radius * 2) / HEAT_STEPS / MAP_SIZE) * size;
   for (const cell of cells) {
     const t = (cell.distance - min) / span;
     const screen = worldToScreen(cell, size);
@@ -228,8 +228,8 @@ function drawTeams(
       alpha: team.eliminated ? 0.35 : 1,
     });
   }
-  const player = hidePlayer ? undefined : teams.find((team) => team.isPlayer);
-  if (!player) return;
+  if (hidePlayer) return;
+  const player = playerOf(teams);
   const screen = worldToScreen(player.pos, size);
   drawDot(ctx, screen.x, screen.y, youRadius, {
     fill: player.eliminated ? "#fb7185" : "#ffe14a",

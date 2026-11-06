@@ -7,13 +7,11 @@ describe("drop plan", () => {
       type: "start",
       seed: 7,
       scenarioId: null,
-      land: null,
-      places: [],
     });
     const drop = { x: 400, y: 600 };
     const loot = { x: 460, y: 640 };
-    const planned = labReducer(labReducer(started, { type: "drop-add", point: drop }), {
-      type: "drop-add",
+    const planned = labReducer(labReducer(started, { type: "pick", point: drop }), {
+      type: "pick",
       point: loot,
     });
     const locked = labReducer(planned, { type: "drop-lock" });
@@ -27,8 +25,6 @@ describe("drop plan", () => {
       type: "start",
       seed: 7,
       scenarioId: null,
-      land: null,
-      places: [],
     });
     const before = started.game?.teams.find((team) => team.isPlayer)?.pos;
     const skipped = labReducer(started, { type: "drop-skip" });

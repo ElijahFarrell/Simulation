@@ -4,24 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
 import { Segmented, SegmentedItem } from "@/components/ui/segmented";
-import { PULL_COPY } from "@/engine/constants";
-import type { Engagement, PullType, Timing } from "@/engine/types";
-
-const PULLS: PullType[] = ["normal", "deep", "half"];
-
-type Choice<T> = { value: T; label: string; hint: string; key: string };
-
-const TIMINGS: Choice<Timing>[] = [
-  { value: "early", label: "Right away", hint: "Leave as soon as it shows", key: "1" },
-  { value: "standard", label: "Wait a bit", hint: "Leave in the middle", key: "2" },
-  { value: "late", label: "Loot first", hint: "Grab mats, then go", key: "3" },
-];
-
-const ENGAGEMENTS: Choice<Engagement>[] = [
-  { value: "avoid", label: "Stay away", hint: "Don't fight", key: "Q" },
-  { value: "tag", label: "Hit and leave", hint: "Shoot once, then go", key: "W" },
-  { value: "fight", label: "Full fight", hint: "Stay until someone loses", key: "E" },
-];
+import { CALL_PARTS, PULL_COPY } from "@/engine/constants";
+import { PULL_TYPES, type Engagement, type PullType, type Timing } from "@/engine/types";
+import { ENGAGEMENT_CHOICES, TIMING_CHOICES, type Choice } from "@/components/lab/choices";
 
 export function DecisionPanel({
   timing,
@@ -53,7 +38,6 @@ export function DecisionPanel({
   onLock: () => void;
 }) {
   return (
-    // overflow-visible so the footer can stick; the card's default overflow-hidden would trap it.
     <Card size="sm" className="overflow-visible">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Your call</CardTitle>
@@ -61,16 +45,16 @@ export function DecisionPanel({
       <CardContent className="grid gap-4">
         {showQuiz ? <PullQuiz pull={pull} guess={pullGuess} onGuess={onGuess} /> : null}
         <ChoiceGroup
-          legend="When you leave"
+          legend={CALL_PARTS.when.label}
           value={timing}
-          options={TIMINGS}
+          options={TIMING_CHOICES}
           onChange={onTiming}
           disabled={busy}
         />
         <ChoiceGroup
-          legend="If you meet a team"
+          legend={CALL_PARTS.contact.label}
           value={engagement}
-          options={ENGAGEMENTS}
+          options={ENGAGEMENT_CHOICES}
           onChange={onEngagement}
           disabled={busy}
         />
@@ -85,7 +69,6 @@ export function DecisionPanel({
         </p>
         {hint ? <p className="text-sm leading-5 text-muted-foreground">{hint}</p> : null}
       </CardContent>
-      {/* The column scrolls on desktop, and the quiz answer and hint push Go below the fold, so keep it pinned. */}
       <CardFooter className="sticky bottom-0 z-10 bg-card shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.5)]">
         <Button type="button" size="lg" className="h-10 w-full text-base" disabled={!canLock || busy} onClick={onLock}>
           {busy ? "Moving…" : "Go"}
@@ -110,7 +93,7 @@ function PullQuiz({
       <div className="grid gap-2 rounded-lg bg-zone/10 p-3">
         <p className="text-sm font-medium">Look at the blue ring. What kind of pull is this?</p>
         <div className="grid grid-cols-3 gap-1.5">
-          {PULLS.map((option) => (
+          {PULL_TYPES.map((option) => (
             <Button key={option} type="button" size="sm" variant="outline" onClick={() => onGuess(option)}>
               {PULL_COPY[option].name}
             </Button>

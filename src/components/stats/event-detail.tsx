@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { LAN_REGION } from "@/lib/fortnite/event-display";
 import type { TournamentSummary } from "@/lib/fortnite/parse";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,7 @@ export function EventDetail({
             <div className="flex flex-wrap gap-1.5">
               {(display?.regions ?? []).map((region) => (
                 <span key={region} className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold">
-                  {region === "ONSITE" ? "LAN" : region}
+                  {region === LAN_REGION ? "LAN" : region}
                 </span>
               ))}
               {(display?.tags ?? []).map((tag) => (

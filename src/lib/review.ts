@@ -15,7 +15,7 @@ export const EMPTY_STATS: SavedStats = {
   badRules: {},
 };
 
-export const STATS_KEY = "rotation-lab-v1";
+const STATS_KEY = "rotation-lab-v1";
 
 export function averageScore(history: readonly PhaseResult[]): number {
   if (history.length === 0) return 0;
@@ -23,54 +23,42 @@ export function averageScore(history: readonly PhaseResult[]): number {
   return total / history.length;
 }
 
-export function worstHabit(
-  history: readonly PhaseResult[],
-): { ruleId: string; count: number; lesson: string } | null {
-  const counts = new Map<string, number>();
-  for (const phase of history) {
-    for (const line of phase.feedback) {
-      if (line.tone !== "bad") continue;
-      counts.set(line.ruleId, (counts.get(line.ruleId) ?? 0) + 1);
-    }
-  }
+type Habit = { ruleId: string; count: number; lesson: string };
 
-  let top: { ruleId: string; count: number } | null = null;
-  for (const [ruleId, count] of counts) {
-    if (!top || count > top.count) top = { ruleId, count };
-  }
-  if (!top) return null;
-  return {
-    ...top,
-    lesson: RULE_LESSONS[top.ruleId] ?? "Review the zones where this showed up.",
-  };
+export function worstHabit(history: readonly PhaseResult[]): Habit | null {
+  return topHabit(badRuleCounts(history, {}));
+}
+
+export function lifetimeHabit(stats: SavedStats): Habit | null {
+  return topHabit(stats.badRules);
 }
 
 export function mergeStats(stats: SavedStats, game: GameState): SavedStats {
-  const badRules = { ...stats.badRules };
-  for (const phase of game.history) {
-    for (const line of phase.feedback) {
-      if (line.tone !== "bad") continue;
-      badRules[line.ruleId] = (badRules[line.ruleId] ?? 0) + 1;
-    }
-  }
   return {
     games: stats.games + 1,
     wins: stats.wins + (game.status === "won" ? 1 : 0),
     bestAverage: Math.max(stats.bestAverage, averageScore(game.history)),
-    badRules,
+    badRules: badRuleCounts(game.history, stats.badRules),
   };
 }
 
-export function lifetimeHabit(stats: SavedStats): { ruleId: string; count: number; lesson: string } | null {
+function badRuleCounts(history: readonly PhaseResult[], start: Record<string, number>): Record<string, number> {
+  const counts = { ...start };
+  for (const phase of history) {
+    for (const line of phase.feedback) {
+      if (line.tone === "bad") counts[line.ruleId] = (counts[line.ruleId] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+function topHabit(counts: Record<string, number>): Habit | null {
   let top: { ruleId: string; count: number } | null = null;
-  for (const [ruleId, count] of Object.entries(stats.badRules)) {
+  for (const [ruleId, count] of Object.entries(counts)) {
     if (!top || count > top.count) top = { ruleId, count };
   }
   if (!top) return null;
-  return {
-    ...top,
-    lesson: RULE_LESSONS[top.ruleId] ?? "Review the zones where this showed up.",
-  };
+  return { ...top, lesson: RULE_LESSONS[top.ruleId] ?? "Review the zones where this showed up." };
 }
 
 const listeners = new Set<() => void>();
@@ -108,7 +96,7 @@ export function writeStats(stats: SavedStats): void {
   for (const listener of listeners) listener();
 }
 
-export function isSavedStats(value: unknown): value is SavedStats {
+function isSavedStats(value: unknown): value is SavedStats {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   return (

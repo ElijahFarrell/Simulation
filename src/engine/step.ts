@@ -1,21 +1,21 @@
-import { aiTiming, chooseAiDestination } from "./ai-behavior";
+import { chooseAiDestination, teamTiming } from "./ai-behavior";
 import { exposureDirections, positioningScore, sectorDensity } from "./analysis";
 import { resolveCombat, type CombatSummary } from "./combat";
 import {
   LATE_REFRESH_HEALS,
   LATE_REFRESH_MATS,
   MAX_MATS,
-  SECTOR_COUNT,
   STANDARD_REFRESH_MATS,
 } from "./constants";
 import { applyChip } from "./damage";
-import { buildFeedback, heldCenter, type FeedbackContext } from "./feedback";
-import { dist, sectorIndex } from "./geometry";
+import { buildFeedback, destinationSide, type FeedbackContext } from "./feedback";
+import { dist } from "./geometry";
 import { stayOnLand } from "./land";
 import { departDelay, simulatePath, type PathSim } from "./movement";
 import { createRng } from "./rng";
 import { scoreDecision } from "./scoring";
 import { applySurge } from "./surge";
+import { aliveCount, playerOf } from "./teams";
 import type {
   Decision,
   GameState,
@@ -25,15 +25,14 @@ import type {
   Vec,
   ZonePhase,
 } from "./types";
-import { zoneAt } from "./zones";
+import { phaseSeed, zoneAt } from "./zones";
 
 export function resolveDecision(state: GameState, decision: Decision): GameState {
   if (state.status !== "deciding") return state;
   const zone = zoneAt(state.zones, state.phaseIndex);
   const rng = createRng(state.rngState);
   const teams = state.teams.map((team) => ({ ...team, damageThisPhase: 0 }));
-  const player = teams.find((team) => team.isPlayer);
-  if (!player) throw new Error("Player team is missing");
+  const player = playerOf(teams);
 
   const refreshEvent = grantRefresh(player, decision.timing);
   const sectors = sectorDensity(state.teams, zone.to);
@@ -81,12 +80,9 @@ export function resolveDecision(state: GameState, decision: Decision): GameState
   };
 }
 
-export function placementFor(teams: readonly Team[]): number {
-  const player = teams.find((team) => team.isPlayer);
-  if (!player) return teams.length;
-  if (player.eliminated) {
-    return teams.filter((team) => !team.eliminated).length + 1;
-  }
+function placementFor(teams: readonly Team[]): number {
+  const player = playerOf(teams);
+  if (player.eliminated) return aliveCount(teams) + 1;
   const better = teams.filter(
     (team) =>
       !team.isPlayer &&
@@ -121,11 +117,10 @@ function moveTeams(
     if (team.eliminated) continue;
     const raw = team.isPlayer ? decision.destination : chooseAiDestination(team, teams, zone.to, rng);
     const dest = team.isPlayer ? stayOnLand(land, raw) : stayOnLand(land, raw, zone.to);
-    const timing = team.isPlayer ? decision.timing : aiTiming(team.archetype);
     const sim = simulatePath({
       start: team.pos,
       dest,
-      departSec: departDelay(timing, zone),
+      departSec: departDelay(teamTiming(team, decision.timing), zone),
       zone,
     });
     team.pos = sim.end;
@@ -149,9 +144,9 @@ function gradePhase(input: {
   matsBeforeFight: number;
 }): PhaseResult {
   const following = input.state.zones[input.state.phaseIndex + 1];
-  const seed = input.state.seed + input.state.phaseIndex * 997 + 13;
+  const seed = phaseSeed(input.state.seed, input.state.phaseIndex) + 13;
   const positioning = following
-    ? positioningScore(input.player.pos, input.zone.to, following, seed).score
+    ? positioningScore(input.player.pos, input.zone.to, following, seed)
     : dist(input.player.pos, input.zone.to.center) <= input.zone.to.radius
       ? 100
       : 35;
@@ -164,20 +159,15 @@ function gradePhase(input: {
     outcome: input.combat.outcome,
     thirdPartied: input.combat.thirdPartied,
     positioning,
-    sectorCount: SECTOR_COUNT,
   });
   if (input.player.eliminated) score.total = Math.min(score.total, 34);
-  const centerHold = heldCenter(input.decision, input.zone.to);
-  const sector = sectorAt(input.sectors, input.decision, input.zone, centerHold);
   const ctx: FeedbackContext = {
     zone: input.zone,
     decision: input.decision,
     stormDamage: input.stormDamage,
     exposure,
-    surgeActive: input.zone.surgeActive,
     surgeHit: input.surgeHit,
-    destinationSector: sector,
-    heldCenter: centerHold,
+    side: destinationSide(input.decision.destination, input.zone.to, input.sectors),
     endPos: input.player.pos,
     nextCenter: following?.to.center ?? null,
     mats: input.matsBeforeFight,
@@ -197,22 +187,7 @@ function gradePhase(input: {
     decision: input.decision,
     score,
     feedback: buildFeedback(ctx),
-    events: dedupe(events),
+    events: [...new Set(events)],
     sectors: input.sectors,
   };
-}
-
-function sectorAt(
-  sectors: PhaseResult["sectors"],
-  decision: Decision,
-  zone: ZonePhase,
-  centerHold: boolean,
-): PhaseResult["sectors"][number] | null {
-  if (centerHold) return null;
-  const index = sectorIndex(zone.to.center, decision.destination, SECTOR_COUNT);
-  return sectors[index] ?? null;
-}
-
-function dedupe(events: string[]): string[] {
-  return [...new Set(events)];
 }

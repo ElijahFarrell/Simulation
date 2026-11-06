@@ -1,3 +1,4 @@
+import { LAN_REGION } from "./event-display";
 import type { TournamentSummary } from "./parse";
 
 export type EventStatus = "live" | "upcoming" | "past";
@@ -28,7 +29,7 @@ export function eventStatus(event: TournamentSummary, now: number): CatalogEvent
 /** A region query also returns neighbours (NAC lists NAW cups). Keep the region's own cups and LAN events. */
 export function inRegion(event: TournamentSummary, region: string): boolean {
   const regions = event.display?.regions ?? [];
-  return regions.length === 0 || regions.includes(region) || regions.includes("ONSITE");
+  return regions.length === 0 || regions.includes(region) || regions.includes(LAN_REGION);
 }
 
 function matches(event: TournamentSummary, filter: CatalogFilter): boolean {

@@ -1,4 +1,6 @@
+import type { UserIdentity } from "convex/server";
 import { ConvexError, v } from "convex/values";
+import { EPIC_NAME_MAX, isEpicAccountId } from "../src/lib/epic/profile";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 
 type Reader = QueryCtx | MutationCtx;
@@ -12,18 +14,34 @@ export async function currentUser(ctx: Reader) {
     .unique();
 }
 
+const NO_EPIC_LINK = {
+  epicAccountId: undefined,
+  epicDisplayName: undefined,
+  epicPreferredLanguage: undefined,
+  epicVerified: undefined,
+};
+
+export async function requireUser(ctx: Reader) {
+  const user = await currentUser(ctx);
+  if (!user) throw new Error("Not signed in");
+  return user;
+}
+
+function identityName(identity: UserIdentity) {
+  return identity.name ?? identity.nickname ?? identity.email;
+}
+
 export const me = query({
   args: {},
   handler: async (ctx) => currentUser(ctx),
 });
 
-/** Creates the Convex user for the signed-in Clerk user, or refreshes their name. */
 export const store = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not signed in");
-    const name = identity.name ?? identity.nickname ?? identity.email;
+    const name = identityName(identity);
     const existing = await currentUser(ctx);
     if (existing) {
       if (existing.name !== name) await ctx.db.patch(existing._id, { name });
@@ -33,8 +51,6 @@ export const store = mutation({
   },
 });
 
-const EPIC_ID = /^[0-9a-f]{32}$/i;
-
 /** Saves the Epic account chosen from a display-name lookup. Unverified: anyone can claim a public name. */
 export const linkEpic = mutation({
   args: {
@@ -43,19 +59,15 @@ export const linkEpic = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const user = await currentUser(ctx);
-    if (!user) throw new Error("Not signed in");
-    if (!EPIC_ID.test(args.epicAccountId)) throw new Error("Epic account id looks wrong");
+    const user = await requireUser(ctx);
+    if (!isEpicAccountId(args.epicAccountId)) throw new Error("Epic account id looks wrong");
     const epicDisplayName = args.epicDisplayName.trim();
-    if (epicDisplayName.length < 1 || epicDisplayName.length > 32) {
-      throw new Error("Epic name must be 1–32 characters");
+    if (epicDisplayName.length < 1 || epicDisplayName.length > EPIC_NAME_MAX) {
+      throw new Error(`Epic name must be 1–${EPIC_NAME_MAX} characters`);
     }
-    await ctx.db.patch(user._id, {
-      epicAccountId: args.epicAccountId.toLowerCase(),
-      epicDisplayName,
-      epicPreferredLanguage: undefined,
-      epicVerified: undefined,
-    });
+    const epicAccountId = args.epicAccountId.toLowerCase();
+    if (user.epicVerified && user.epicAccountId === epicAccountId) return null;
+    await ctx.db.patch(user._id, { ...NO_EPIC_LINK, epicAccountId, epicDisplayName });
     return null;
   },
 });
@@ -92,7 +104,7 @@ export const applyEpicLink = internalMutation({
     }
     return await ctx.db.insert("users", {
       tokenIdentifier: identity.tokenIdentifier,
-      name: identity.name ?? identity.nickname ?? identity.email,
+      name: identityName(identity),
       ...link,
     });
   },
@@ -101,13 +113,7 @@ export const applyEpicLink = internalMutation({
 export const unlinkEpic = mutation({
   args: {},
   handler: async (ctx) => {
-    const user = await currentUser(ctx);
-    if (!user) throw new Error("Not signed in");
-    await ctx.db.patch(user._id, {
-      epicAccountId: undefined,
-      epicDisplayName: undefined,
-      epicPreferredLanguage: undefined,
-      epicVerified: undefined,
-    });
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, NO_EPIC_LINK);
   },
 });

@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { CALL_PARTS, type CallPart, type ScorePart } from "@/engine/constants";
 import { pointsLost } from "@/engine/scoring";
 import type { FeedbackTone, PhaseResult, ScoreBreakdown } from "@/engine/types";
-import { scoreTone, TONE_FILL, TONE_TEXT } from "@/lib/score-tone";
+import { scoreTone, TONE_FILL, TONE_TEXT } from "@/components/lab/score-tone";
 
 const CALL_ORDER: CallPart[] = ["where", "when", "contact"];
 

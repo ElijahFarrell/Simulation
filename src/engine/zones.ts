@@ -7,11 +7,11 @@ import {
   PULL_ODDS,
   ZONE_TABLE,
 } from "./constants";
-import { clamp, sampleDisc } from "./geometry";
+import { clamp, polar, sampleDisc } from "./geometry";
 import type { Rng } from "./rng";
 import type { Circle, PhaseName, PullType, Vec, ZonePhase } from "./types";
 
-export type PlacedZone = { center: Vec; pull: PullType };
+type PlacedZone = { center: Vec; pull: PullType };
 
 export function placeNextZone(rng: Rng, parent: Circle, radius: number, isMoving: boolean): PlacedZone {
   const pull = rollPull(rng, isMoving);
@@ -39,10 +39,7 @@ function pullCenter(rng: Rng, parent: Circle, radius: number, pull: PullType): V
   const distance =
     pull === "deep" ? inside * rng.range(...DEEP_PULL_REACH) : parent.radius * rng.range(...HALF_PULL_REACH);
   const theta = rng.range(0, Math.PI * 2);
-  return {
-    x: parent.center.x + Math.cos(theta) * distance,
-    y: parent.center.y + Math.sin(theta) * distance,
-  };
+  return polar(parent.center, theta, distance);
 }
 
 export function generateZones(rng: Rng): ZonePhase[] {
@@ -75,6 +72,10 @@ export function phaseLabel(zone: ZonePhase): PhaseName {
   if (zone.index >= ENDGAME_FROM) return "Endgame";
   if (zone.index <= 2) return "Early";
   return "Mid";
+}
+
+export function phaseSeed(gameSeed: number, phaseIndex: number): number {
+  return gameSeed + phaseIndex * 997;
 }
 
 export function zoneAt(zones: readonly ZonePhase[], index: number): ZonePhase {

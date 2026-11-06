@@ -1,9 +1,9 @@
 import { sectorDensity, pullRegion } from "./analysis";
 import { normalizeSettings, createLobby } from "./lobby";
 import { createRng } from "./rng";
-import { placementFor } from "./step";
-import type { GameSettings, GameState, LandMask, PhaseView, Team, Vec } from "./types";
-import { generateZones, phaseLabel, zoneAt } from "./zones";
+import { aliveCount, playerOf } from "./teams";
+import type { GameSettings, GameState, LandMask, PhaseView, Vec } from "./types";
+import { generateZones, phaseLabel, phaseSeed, zoneAt } from "./zones";
 
 export function createGame(
   seed: number,
@@ -39,27 +39,21 @@ export function getPhaseView(state: GameState): PhaseView {
     sectors: sectorDensity(state.teams, zone.to),
     pull: pullRegion(zone, following),
     following: following ?? null,
-    teamsAlive: state.teams.filter((team) => !team.eliminated).length,
-    player: playerOf(state),
-    heatmapSeed: (state.seed + state.phaseIndex * 997) >>> 0,
+    teamsAlive: aliveCount(state.teams),
+    player: playerOf(state.teams),
+    heatmapSeed: phaseSeed(state.seed, state.phaseIndex) >>> 0,
   };
 }
 
 export function advancePhase(state: GameState): GameState {
   if (state.status !== "resolved") return state;
-  const nextIndex = state.phaseIndex + 1;
-  if (nextIndex >= state.zones.length) {
-    return { ...state, status: "won", placement: placementFor(state.teams) };
-  }
-  const player = state.teams.find((team) => team.isPlayer);
-  if (!player || player.eliminated) {
-    return { ...state, status: "dead", placement: placementFor(state.teams) };
-  }
-  return { ...state, phaseIndex: nextIndex, status: "deciding" };
+  return { ...state, phaseIndex: state.phaseIndex + 1, status: "deciding" };
 }
 
-function playerOf(state: GameState): Team {
-  const player = state.teams.find((team) => team.isPlayer);
-  if (!player) throw new Error("Player team is missing");
-  return player;
+export function isGameOver(state: GameState): boolean {
+  return state.status === "dead" || state.status === "won";
+}
+
+export function finishKey(state: GameState): string {
+  return `${state.seed}:${state.history.length}:${state.status}`;
 }

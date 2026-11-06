@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { replayStatus } from "./schema";
-import { currentUser } from "./users";
+import { currentUser, requireUser } from "./users";
 
 const MAX_REPLAY_BYTES = 120 * 1024 * 1024;
 
@@ -38,8 +38,7 @@ export const generateUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    const user = await currentUser(ctx);
-    if (!user) throw new Error("Not signed in");
+    await requireUser(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -51,8 +50,7 @@ export const register = mutation({
   },
   returns: v.id("replays"),
   handler: async (ctx, args) => {
-    const user = await currentUser(ctx);
-    if (!user) throw new Error("Not signed in");
+    const user = await requireUser(ctx);
     const fileName = args.fileName.split(/[/\\]/).pop()?.trim() ?? "";
     if (!fileName.toLowerCase().endsWith(".replay") || fileName.length > 180) {
       throw new Error("Choose a .replay file");

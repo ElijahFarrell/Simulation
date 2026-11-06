@@ -1,8 +1,8 @@
-import { CALL_PARTS, type CallPart, SCORE_WEIGHTS, STORM_DAMAGE_CAP } from "./constants";
+import { CALL_PARTS, type CallPart, SCORE_WEIGHTS, SECTOR_COUNT, STORM_DAMAGE_CAP } from "./constants";
 import { clamp } from "./geometry";
 import type { FightOutcome, ScoreBreakdown } from "./types";
 
-export type ScoreInput = {
+type ScoreInput = {
   stormDamage: number;
   exposure: number;
   surgeActive: boolean;
@@ -10,13 +10,12 @@ export type ScoreInput = {
   outcome: FightOutcome;
   thirdPartied: boolean;
   positioning: number;
-  sectorCount: number;
 };
 
 export function scoreDecision(input: ScoreInput): ScoreBreakdown {
   const storm = clamp(100 - (input.stormDamage / STORM_DAMAGE_CAP) * 100, 0, 100);
   const contact = contactScore(input);
-  const exposure = clamp(100 - input.exposure * (100 / input.sectorCount), 0, 100);
+  const exposure = clamp(100 - input.exposure * (100 / SECTOR_COUNT), 0, 100);
   const surge = surgeScore(input);
   const positioning = clamp(input.positioning, 0, 100);
   const total = Math.round(
@@ -50,8 +49,6 @@ function contactScore(input: ScoreInput): number {
       return input.thirdPartied ? 28 : 40;
     case "loss":
       return 12;
-    default:
-      return 50;
   }
 }
 

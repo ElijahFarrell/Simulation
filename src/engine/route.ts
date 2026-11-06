@@ -2,7 +2,6 @@ import { LOOT_STOP_SEC, ROTATE_SPEED } from "./constants";
 import { dist } from "./geometry";
 import type { Vec } from "./types";
 
-/** Travel time plus a loot pause at every stop after the drop. A lone drop takes no travel. */
 export function routeSeconds(points: readonly Vec[]): number {
   if (points.length < 2) return 0;
   let travel = 0;

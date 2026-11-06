@@ -1,5 +1,6 @@
 import { SECTOR_COUNT } from "./constants";
 import {
+  angleFromNorthCW,
   clampToCircle,
   pointFromNorth,
   sampleDisc,
@@ -8,10 +9,14 @@ import {
 import type { Rng } from "./rng";
 import type { Archetype, Circle, Team, Timing, Vec } from "./types";
 
-export function aiTiming(archetype: Archetype): Timing {
+function aiTiming(archetype: Archetype): Timing {
   if (archetype === "deep" || archetype === "fighter") return "early";
   if (archetype === "passive") return "late";
   return "standard";
+}
+
+export function teamTiming(team: Team, playerTiming: Timing): Timing {
+  return team.isPlayer ? playerTiming : aiTiming(team.archetype);
 }
 
 export function chooseAiDestination(
@@ -29,13 +34,11 @@ export function chooseAiDestination(
       return passivePoint(team, teams, nextZone, rng);
     case "fighter":
       return fighterPoint(team, teams, nextZone, rng);
-    default:
-      return clampToCircle(team.pos, nextZone, 0.9);
   }
 }
 
 function edgePoint(zone: Circle, from: Vec, rng: Rng): Vec {
-  const angle = sectorAngle(zone.center, from);
+  const angle = angleFromNorthCW(zone.center, from);
   return pointFromNorth(zone.center, angle, zone.radius * rng.range(0.85, 0.95));
 }
 
@@ -90,8 +93,4 @@ function nearestOther(team: Team, teams: readonly Team[]): Team | null {
     }
   }
   return best;
-}
-
-function sectorAngle(origin: Vec, point: Vec): number {
-  return Math.atan2(point.x - origin.x, point.y - origin.y);
 }

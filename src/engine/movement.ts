@@ -11,7 +11,6 @@ export type PathSim = {
 export function departDelay(timing: Timing, zone: ZonePhase): number {
   if (timing === "early") return 0;
   if (timing === "standard") return zone.waitSec * 0.45;
-  // Late means you are still farming after the storm has started moving.
   return zone.waitSec + zone.shrinkSec * 0.42;
 }
 

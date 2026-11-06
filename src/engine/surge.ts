@@ -1,8 +1,8 @@
-import { SURGE_BASE_DAMAGE, SURGE_HIT_FRACTION, surgeThreshold } from "./constants";
+import { SURGE_BASE_DAMAGE, SURGE_DAMAGE_PER_ZONE, SURGE_HIT_FRACTION, surgeThreshold } from "./constants";
 import { applyChip } from "./damage";
 import type { Team, ZonePhase } from "./types";
 
-export type SurgeResult = {
+type SurgeResult = {
   events: string[];
   playerHit: boolean;
 };
@@ -22,7 +22,7 @@ export function applySurge(teams: Team[], zone: ZonePhase): SurgeResult {
   });
   const hitCount = Math.max(1, Math.round(alive.length * SURGE_HIT_FRACTION));
   const hits = ranked.slice(0, hitCount);
-  const amount = SURGE_BASE_DAMAGE + zone.index * 6;
+  const amount = SURGE_BASE_DAMAGE + zone.index * SURGE_DAMAGE_PER_ZONE;
   const events: string[] = [];
   let playerHit = false;
 

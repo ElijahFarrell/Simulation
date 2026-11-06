@@ -25,7 +25,6 @@ export type GameSummary = {
   elims: number;
   damageDealt: number;
   damageTaken: number;
-  /** Damage dealt divided by damage taken. Null when nothing was taken. */
   damageRatio: number | null;
   avgPlacement: number | null;
 };
@@ -50,9 +49,9 @@ export function summarizeGames(games: GameLine[]): GameSummary {
   };
 }
 
-export type QualStatus = "in" | "out" | "tied" | "unknown" | "no-line";
+type QualStatus = "in" | "out" | "tied" | "unknown" | "no-line";
 
-export type Pace = {
+type Pace = {
   projectedYou: number | null;
   projectedLine: number;
   gamesLeft: number;

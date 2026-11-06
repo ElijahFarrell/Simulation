@@ -8,6 +8,7 @@ import {
 } from "./constants";
 import { applyChip, applyKnock } from "./damage";
 import { dist } from "./geometry";
+import { playerOf } from "./teams";
 import type { Rng } from "./rng";
 import type { Decision, FightOutcome, Team, Vec } from "./types";
 
@@ -15,7 +16,6 @@ export type CombatSummary = {
   events: string[];
   outcome: FightOutcome;
   thirdPartied: boolean;
-  knocked: number;
 };
 
 type PathMap = Map<string, Vec[]>;
@@ -26,11 +26,11 @@ export function resolveCombat(
   decision: Decision,
   rng: Rng,
 ): CombatSummary {
-  const player = teams.find((team) => team.isPlayer);
+  const player = playerOf(teams);
   const fought = new Set<string>();
   const summary =
-    !player || player.eliminated
-      ? { events: [], outcome: "none" as const, thirdPartied: false, knocked: 0 }
+    player.eliminated
+      ? { events: [], outcome: "none" as const, thirdPartied: false }
       : resolvePlayer(
           player,
           livingOthers(teams, player)
@@ -58,7 +58,6 @@ function resolvePlayer(
       events: whiff ? ["Nobody was close enough to hit"] : [],
       outcome: whiff ? "whiff" : "none",
       thirdPartied: false,
-      knocked: 0,
     };
   }
 
@@ -84,7 +83,6 @@ function tryAvoid(
       events: [`You snuck past ${contactCount} team${contactCount === 1 ? "" : "s"}`],
       outcome: "escaped",
       thirdPartied: false,
-      knocked: 0,
     };
   }
   const forced = commitFight(player, target, [target], rng, fought, 0.72, "forced", "loss");
@@ -122,7 +120,7 @@ function tagTarget(
   }
   const events = [`You hit ${label(target)} and then left`];
   if (thirdPartied) events.push("Other teams were close and shot back");
-  return { events, outcome: "tag", thirdPartied, knocked: 0 };
+  return { events, outcome: "tag", thirdPartied };
 }
 
 function commitFight(
@@ -158,7 +156,6 @@ function commitFight(
     events,
     outcome: won ? winOutcome : lossOutcome,
     thirdPartied,
-    knocked: won ? result.knocks : 0,
   };
 }
 

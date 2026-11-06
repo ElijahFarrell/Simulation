@@ -1,7 +1,7 @@
 import { HP_PER_ALIVE } from "./constants";
 import type { Team } from "./types";
 
-export function syncAlive(team: Team): void {
+function syncAlive(team: Team): void {
   if (team.hp <= 0) {
     team.hp = 0;
     team.alive = 0;
@@ -12,7 +12,6 @@ export function syncAlive(team: Team): void {
   team.eliminated = false;
 }
 
-/** Storm, surge, and chip damage. Heals absorb first. */
 export function applyChip(team: Team, amount: number): void {
   if (team.eliminated || amount <= 0) return;
   const healed = Math.min(team.heals, amount);
@@ -21,7 +20,6 @@ export function applyChip(team: Team, amount: number): void {
   syncAlive(team);
 }
 
-/** A knock removes a player outright. Heals do not stop it. */
 export function applyKnock(team: Team, knocks: number): void {
   if (team.eliminated || knocks <= 0) return;
   const lost = Math.min(team.alive, knocks);
