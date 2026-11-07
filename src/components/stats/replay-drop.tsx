@@ -3,9 +3,44 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
-import { FileVideoIcon, LoaderCircleIcon, UploadIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, FileVideoIcon, LoaderCircleIcon, UploadIcon } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/**
+ * Sites can't open a file picker at a path. Chrome's showOpenFilePicker can remember a folder,
+ * but it refuses anything inside AppData, so players paste this into the normal picker instead.
+ */
+const REPLAY_FOLDER = "%LOCALAPPDATA%\\FortniteGame\\Saved\\Demos";
+
+function ReplayFolder() {
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
+
+  function copyPath() {
+    navigator.clipboard.writeText(REPLAY_FOLDER).then(
+      () => setCopy("copied"),
+      () => setCopy("failed"),
+    );
+  }
+
+  return (
+    <div className="grid gap-2 rounded-xl border border-border bg-card/50 px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <code className="min-w-0 font-mono text-xs break-all select-all">{REPLAY_FOLDER}</code>
+        <Button type="button" variant="outline" size="sm" onClick={copyPath}>
+          {copy === "copied" ? <CheckIcon data-icon="inline-start" /> : <CopyIcon data-icon="inline-start" />}
+          {copy === "copied" ? "Copied" : "Copy folder path"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {copy === "failed"
+          ? "Couldn't copy that. Select the path above and copy it yourself."
+          : "On a Windows PC, this is where Fortnite saves replays. In the file window, paste it into the File name box and press Enter."}
+      </p>
+    </div>
+  );
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -60,6 +95,7 @@ export function ReplayDrop() {
           and damage out of the file is not in this build. Tournament damage comes from the session leaderboard.
         </p>
       </div>
+      <ReplayFolder />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <label
           className={cn(
