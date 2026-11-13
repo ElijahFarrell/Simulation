@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { CheckIcon, CopyIcon, FileVideoIcon, LoaderCircleIcon, UploadIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { replayUploadIssue } from "@/lib/replays/limits";
 import { cn } from "@/lib/utils";
 
 /**
@@ -58,8 +59,9 @@ export function ReplayDrop() {
   async function upload(file: File | undefined) {
     if (!file) return;
     setError(null);
-    if (!file.name.toLowerCase().endsWith(".replay")) {
-      setError("Choose a .replay file.");
+    const issue = replayUploadIssue(file.name, file.size);
+    if (issue) {
+      setError(issue);
       return;
     }
     setBusy(true);

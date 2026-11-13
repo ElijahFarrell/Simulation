@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { epicProfileFrom, accessTokenFrom } from "../src/lib/epic/profile";
+import { isEpicCallbackUri } from "../src/lib/epic/redirect";
 import { EPIC_BASIC_PROFILE_SCOPE, EPIC_TOKEN_URL, EPIC_USERINFO_URL } from "../src/lib/epic/authorize";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
@@ -12,6 +13,7 @@ export const linkWithCode = action({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError({ code: "unauthorized" });
+    if (!isEpicCallbackUri(args.redirectUri)) throw new ConvexError({ code: "failed" });
     const profile = await exchangeAuthorizationCode(args.code, args.redirectUri);
     await ctx.runMutation(internal.users.applyEpicLink, profile);
   },

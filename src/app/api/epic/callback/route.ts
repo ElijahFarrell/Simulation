@@ -45,6 +45,12 @@ function resultCode(error: unknown): EpicResult {
 
 function redirectEpic(url: URL, result: EpicResult) {
   const response = NextResponse.redirect(new URL(epicResultPath(result), url));
-  response.cookies.set(EPIC_STATE_COOKIE, "", { path: "/api/epic", maxAge: 0 });
+  response.cookies.set(EPIC_STATE_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: url.protocol === "https:",
+    path: "/api/epic",
+    maxAge: 0,
+  });
   return response;
 }

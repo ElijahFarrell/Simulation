@@ -6,13 +6,13 @@ function fakeJwt(payload: object): string {
   return `${encode({ alg: "RS256" })}.${encode(payload)}.sig`;
 }
 
-const accountId = "***REMOVED***";
+const accountId = "a".repeat(32);
 
 describe("epicProfileFrom", () => {
   it("reads the account id and display name Epic puts on the token", () => {
-    const accessToken = fakeJwt({ sub: accountId, dn: "***REMOVED***" });
+    const accessToken = fakeJwt({ sub: accountId, dn: "SamplePlayer" });
     const profile = epicProfileFrom({ access_token: accessToken, account_id: accountId }, null);
-    expect(profile).toEqual({ accountId, displayName: "***REMOVED***" });
+    expect(profile).toEqual({ accountId, displayName: "SamplePlayer" });
     expect(accessTokenFrom({ access_token: accessToken })).toBe(accessToken);
   });
 
@@ -26,10 +26,10 @@ describe("epicProfileFrom", () => {
   });
 
   it("rejects a userinfo subject that is not the authenticated account", () => {
-    const accessToken = fakeJwt({ sub: accountId, dn: "***REMOVED***" });
+    const accessToken = fakeJwt({ sub: accountId, dn: "SamplePlayer" });
     const profile = epicProfileFrom(
       { access_token: accessToken, account_id: accountId },
-      { sub: "a".repeat(32), preferred_username: "Other" },
+      { sub: "b".repeat(32), preferred_username: "Other" },
     );
     expect(profile).toBeNull();
   });

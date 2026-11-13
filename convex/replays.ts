@@ -1,9 +1,8 @@
 import { v } from "convex/values";
+import { replayFileName, replayUploadIssue } from "../src/lib/replays/limits";
 import { mutation, query } from "./_generated/server";
 import { replayStatus } from "./schema";
 import { currentUser, requireUser } from "./users";
-
-const MAX_REPLAY_BYTES = 120 * 1024 * 1024;
 
 export const list = query({
   args: {},
@@ -52,17 +51,14 @@ export const register = mutation({
   returns: v.union(v.object({ replayId: v.id("replays") }), v.object({ rejected: v.string() })),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const fileName = args.fileName.split(/[/\\]/).pop()?.trim() ?? "";
-    if (!fileName.toLowerCase().endsWith(".replay") || fileName.length > 180) {
-      await ctx.storage.delete(args.storageId);
-      return { rejected: "Choose a .replay file." };
-    }
     const metadata = await ctx.db.system.get("_storage", args.storageId);
     if (!metadata) throw new Error("Upload did not finish");
-    if (metadata.size <= 0 || metadata.size > MAX_REPLAY_BYTES) {
+    const issue = replayUploadIssue(args.fileName, metadata.size);
+    if (issue) {
       await ctx.storage.delete(args.storageId);
-      return { rejected: "Replay must be under 120 MB." };
+      return { rejected: issue };
     }
+    const fileName = replayFileName(args.fileName);
     const existing = await ctx.db
       .query("replays")
       .withIndex("by_user_file", (q) => q.eq("userId", user._id).eq("fileName", fileName).eq("sizeBytes", metadata.size))
